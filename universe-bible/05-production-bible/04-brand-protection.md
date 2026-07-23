@@ -130,6 +130,25 @@ Seluruh implementasi tetap mengacu pada Universe Bible.
 
 ---
 
+# 6.1 Differentiation from Persebaya Mascots
+
+Nama **Suro & Buya** terinspirasi dari legenda Sura (hiu) dan Baya (buaya), asal-usul nama kota Surabaya.
+
+Klub sepak bola Persebaya Surabaya juga mewarisi legenda yang sama, dengan julukan "Bajul Ijo" dan sepasang maskot resmi bernama **Jojo** (buaya) dan **Zoro** (hiu).
+
+Legenda Sura-Baya adalah cerita rakyat publik, bukan kekayaan intelektual eksklusif milik Persebaya. Oleh karena itu **Suro & Buya** sah menggunakan sumber legenda yang sama.
+
+Namun untuk menjaga posisi yang jelas sebagai karya independen, seluruh implementasi wajib memastikan:
+
+* **Suro & Buya adalah karya edukasi anak independen**, terinspirasi legenda kota Surabaya, dan **tidak berafiliasi** dengan Persebaya maupun klub sepak bola mana pun.
+* Desain visual (siluet, kostum, palet warna, aksesoris) harus jelas berbeda dari Jojo & Zoro.
+* Hindari elemen jersey sepak bola, nomor punggung, kombinasi warna hijau-putih khas kostum Persebaya, atau topi hitam polos seperti Jojo.
+* Materi promosi tidak boleh menyiratkan hubungan resmi dengan Persebaya, Bonek, atau kompetisi sepak bola mana pun.
+
+Lihat juga `04-visual-bible/01-visual-style-guide.md` untuk arahan desain fisik yang lebih rinci.
+
+---
+
 # 7. Restricted Usage
 
 Tidak diperbolehkan:

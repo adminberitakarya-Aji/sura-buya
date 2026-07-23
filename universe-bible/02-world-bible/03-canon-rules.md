@@ -97,6 +97,21 @@ Seluruh canon harus sesuai untuk audiens utama berusia 4–9 tahun.
 
 ---
 
+## Weakness Must Have Consequence
+
+Kelemahan setiap karakter utama wajib memiliki dampak nyata terhadap jalannya cerita.
+
+Kelemahan tidak boleh hanya disebutkan sebagai sifat, tanpa pernah benar-benar menyebabkan masalah di dalam cerita.
+
+Contoh penerapan pada Suro dan Buya:
+
+* Kelemahan Suro (bertindak sebelum berpikir) harus benar-benar memicu masalah kecil di lapangan pada sebagian episode.
+* Kelemahan Buya (lupa waktu/tugas karena rasa penasaran) harus benar-benar mengubah rencana perjalanan pada sebagian episode.
+
+Pertumbuhan karakter diukur dari **seberapa cepat mereka menyadari dan memperbaiki** dampak kelemahan tersebut, bukan dari hilangnya kelemahan itu sendiri. Kelemahan inti karakter tidak boleh "disembuhkan" sepenuhnya — ia tetap menjadi bagian permanen dari identitas karakter di sepanjang universe.
+
+---
+
 # 6. Canon Levels
 
 Universe mengenal beberapa tingkat canon.

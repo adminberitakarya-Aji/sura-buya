@@ -160,7 +160,7 @@ Siapa Suro & Buya.
 | 01-suro.md | ⏳ |
 | 02-buya.md | ⏳ |
 | 03-relationship-dynamic.md | ⏳ |
-| 04-voice-guide.md | 🚧 |
+| 04-voice-guide.md | ⏳ |
 | 05-supporting-cast.md | ⏳ |
 
 ---
@@ -173,7 +173,7 @@ Dunia tempat Suro & Buya hidup.
 |------|--------|
 | 00-overview.md | ⏳ |
 | 01-geography-setting.md | ⏳ |
-| 02-lore.md | 🚧 |
+| 02-lore.md | ⏳ |
 | 03-canon-rules.md | ⏳ |
 | 04-regional-culture-guide.md | ⏳ |
 
@@ -185,12 +185,12 @@ Bagaimana cerita dibangun.
 
 | File | Status |
 |------|--------|
-| 00-overview.md | 🚧 |
+| 00-overview.md | ⏳ |
 | 01-season-structure.md | ⏳ |
 | 02-episode-formula.md | ⏳ |
-| 03-character-arcs.md | 🚧 |
-| 04-themes-per-season.md | 🚧 |
-| 05-story-dos-donts.md | 🚧 |
+| 03-character-arcs.md | ⏳ |
+| 04-themes-per-season.md | ⏳ |
+| 05-story-dos-donts.md | ⏳ |
 | episodes/episode-01-draft.md | 🚧 |
 
 ---
@@ -203,9 +203,9 @@ Seluruh panduan visual.
 |------|--------|
 | 00-overview.md | ⏳ |
 | 01-visual-style-guide.md | ⏳ |
-| 02-art-direction.md | 🚧 |
+| 02-art-direction.md | ⏳ |
 | 03-environment-design.md | ⏳ |
-| 04-ai-prompt-bible.md | 🚧 |
+| 04-ai-prompt-bible.md | ⏳ |
 | 05-model-sheets.md | ⏳ |
 
 ---
@@ -216,9 +216,9 @@ Panduan produksi dan pengembangan IP.
 
 | File | Status |
 |------|--------|
-| 00-overview.md | 🚧 |
+| 00-overview.md | ⏳ |
 | 01-franchise-guide.md | ⏳ |
-| 02-production-pipeline.md | 🚧 |
+| 02-production-pipeline.md | ⏳ |
 | 03-qa-checklist.md | ⏳ |
 | 04-brand-protection.md | ⏳ |
 

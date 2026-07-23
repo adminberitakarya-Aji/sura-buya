@@ -8,6 +8,12 @@ Format changelog mengacu pada prinsip **Keep a Changelog** dan menggunakan **Sem
 
 # [Unreleased]
 
+## Fixed
+
+* `02-world-bible/03-canon-rules.md` — menambahkan aturan **"Weakness Must Have Consequence"**: kelemahan karakter utama wajib berdampak nyata terhadap cerita, tidak boleh hanya disebutkan sebagai sifat kosong. Aturan ini sebelumnya hanya ada dalam diskusi dan belum tercatat sebagai canon resmi.
+* `05-production-bible/04-brand-protection.md` — menambahkan bagian **"Differentiation from Persebaya Mascots"**: penjelasan asal-usul legenda Sura-Baya yang sama-sama diwarisi oleh IP ini dan maskot Persebaya (Jojo & Zoro), beserta panduan konkret agar desain visual tetap berbeda dan posisi sebagai karya independen tetap jelas.
+* `README.md` — sinkronisasi tabel status: mayoritas file yang sebelumnya ditandai 🚧 ternyata sudah berisi draft lengkap, diubah jadi ⏳. Hanya `episodes/episode-01-draft.md` yang benar-benar masih kosong (0 byte) dan tetap 🚧.
+
 ## Added
 
 * Placeholder untuk perubahan yang belum dirilis.
