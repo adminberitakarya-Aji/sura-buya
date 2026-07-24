@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://surobuya.ai/schema/context.schema.json",
+  "title": "Working Context",
+  "description": "Working Context assembled by the Memory Runtime for use throughout a single AI Engine execution.",
+  "type": "object",
+
+  "required": [
+    "id",
+    "executionId",
+    "status",
+    "references",
+    "memory",
+    "metadata"
+  ],
+
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique context identifier."
+    },
+
+    "executionId": {
+      "type": "string"
+    },
+
+    "workflowId": {
+      "type": "string"
+    },
+
+    "status": {
+      "type": "string",
+      "enum": [
+        "building",
+        "ready",
+        "updated",
+        "expired"
+      ]
+    },
+
+    "intent": {
+      "type": "string",
+      "description": "Original creator request."
+    },
+
+    "references": {
+      "type": "object",
+
+      "properties": {
+        "characterBible": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+
+        "worldBible": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+
+        "storyBible": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+
+        "visualBible": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+
+        "productionBible": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+
+    "memory": {
+      "type": "object",
+
+      "required": [
+        "workingMemory"
+      ],
+
+      "properties": {
+        "workingMemory": {
+          "type": "object"
+        },
+
+        "sessionMemory": {
+          "type": "object"
+        },
+
+        "executionMemory": {
+          "type": "object"
+        },
+
+        "cache": {
+          "type": "object"
+        }
+      }
+    },
+
+    "runtimeContext": {
+      "type": "object",
+
+      "properties": {
+        "planningId": {
+          "type": "string"
+        },
+
+        "currentScene": {
+          "type": "integer",
+          "minimum": 1
+        },
+
+        "activeCharacters": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+
+        "timelinePosition": {
+          "type": "string"
+        },
+
+        "location": {
+          "type": "string"
+        }
+      }
+    },
+
+    "history": {
+      "type": "object",
+
+      "properties": {
+        "previousEpisodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+
+        "previousScenes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+
+    "constraints": {
+      "type": "object",
+
+      "properties": {
+        "followCanon": {
+          "type": "boolean",
+          "default": true
+        },
+
+        "allowNewCharacter": {
+          "type": "boolean",
+          "default": false
+        },
+
+        "allowTimelineChange": {
+          "type": "boolean",
+          "default": false
+        },
+
+        "allowWorldModification": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+
+    "statistics": {
+      "type": "object",
+
+      "properties": {
+        "referenceCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+
+        "characterCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+
+        "sceneCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+
+        "tokenEstimate": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+
+    "metadata": {
+      "type": "object",
+
+      "required": [
+        "createdAt",
+        "updatedAt"
+      ],
+
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+
+        "memoryVersion": {
+          "type": "string"
+        },
+
+        "engineVersion": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
