@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://suro-buya.dev/schema/dialogue.schema.json",
+  "title": "Dialogue",
+  "description": "Canonical Dialogue object for the Suro & Buya AI Engine.",
+  "type": "object",
+  "additionalProperties": false,
+
+  "required": [
+    "id",
+    "version",
+    "status",
+    "sceneId",
+    "dialogues",
+    "metadata"
+  ],
+
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^DLG-[A-Z0-9_-]+$"
+    },
+
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "review",
+        "approved",
+        "production",
+        "published",
+        "archived"
+      ]
+    },
+
+    "sceneId": {
+      "type": "string",
+      "pattern": "^SCN-[A-Z0-9_-]+$"
+    },
+
+    "language": {
+      "type": "string",
+      "default": "id-ID"
+    },
+
+    "dialogues": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/dialogueLine"
+      }
+    },
+
+    "notes": {
+      "type": "string"
+    },
+
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    }
+  },
+
+  "$defs": {
+    "dialogueLine": {
+      "type": "object",
+      "additionalProperties": false,
+
+      "required": [
+        "lineNumber",
+        "speaker",
+        "text"
+      ],
+
+      "properties": {
+        "lineNumber": {
+          "type": "integer",
+          "minimum": 1
+        },
+
+        "speaker": {
+          "type": "string",
+          "pattern": "^CHR-[A-Z0-9_-]+$"
+        },
+
+        "text": {
+          "type": "string"
+        },
+
+        "emotion": {
+          "type": "string"
+        },
+
+        "intent": {
+          "type": "string"
+        },
+
+        "action": {
+          "type": "string"
+        },
+
+        "pause": {
+          "type": "boolean"
+        },
+
+        "emphasis": {
+          "type": "string"
+        },
+
+        "voiceDirection": {
+          "type": "string"
+        },
+
+        "references": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+
+      "required": [
+        "createdAt",
+        "updatedAt",
+        "createdBy"
+      ],
+
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+
+        "createdBy": {
+          "type": "string"
+        },
+
+        "reviewedBy": {
+          "type": "string"
+        },
+
+        "approvedBy": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

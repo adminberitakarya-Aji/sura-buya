@@ -1,0 +1,325 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://suro-buya.dev/schema/character.schema.json",
+  "title": "Character",
+  "description": "Canonical Character object for the Suro & Buya AI Engine.",
+  "type": "object",
+  "additionalProperties": false,
+
+  "required": [
+    "id",
+    "version",
+    "status",
+    "name",
+    "role",
+    "personality",
+    "appearance",
+    "relationships",
+    "dialogueStyle",
+    "metadata"
+  ],
+
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^CHR-[A-Z0-9_-]+$"
+    },
+
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "review",
+        "approved",
+        "production",
+        "published",
+        "archived"
+      ]
+    },
+
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+
+    "alias": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+
+    "role": {
+      "type": "string",
+      "enum": [
+        "protagonist",
+        "deuteragonist",
+        "supporting",
+        "mentor",
+        "antagonist",
+        "villain",
+        "comic-relief",
+        "background"
+      ]
+    },
+
+    "age": {
+      "type": "integer",
+      "minimum": 0
+    },
+
+    "gender": {
+      "type": "string"
+    },
+
+    "occupation": {
+      "type": "string"
+    },
+
+    "description": {
+      "type": "string"
+    },
+
+    "personality": {
+      "$ref": "#/$defs/personality"
+    },
+
+    "appearance": {
+      "$ref": "#/$defs/appearance"
+    },
+
+    "dialogueStyle": {
+      "$ref": "#/$defs/dialogueStyle"
+    },
+
+    "goals": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+
+    "strengths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+
+    "weaknesses": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+
+    "backstory": {
+      "type": "string"
+    },
+
+    "relationships": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/relationship"
+      }
+    },
+
+    "visualReference": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uri"
+      }
+    },
+
+    "voiceProfile": {
+      "$ref": "#/$defs/voiceProfile"
+    },
+
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    }
+  },
+
+  "$defs": {
+    "personality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "traits"
+      ],
+      "properties": {
+        "traits": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fears": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "motivations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+
+    "appearance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "genderExpression",
+        "height",
+        "build",
+        "hair",
+        "eyes",
+        "clothing"
+      ],
+      "properties": {
+        "genderExpression": {
+          "type": "string"
+        },
+        "height": {
+          "type": "string"
+        },
+        "build": {
+          "type": "string"
+        },
+        "hair": {
+          "type": "string"
+        },
+        "eyes": {
+          "type": "string"
+        },
+        "clothing": {
+          "type": "string"
+        },
+        "accessories": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+
+    "dialogueStyle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tone": {
+          "type": "string"
+        },
+        "vocabulary": {
+          "type": "string"
+        },
+        "speechPattern": {
+          "type": "string"
+        },
+        "catchphrases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+
+    "relationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "characterId",
+        "type"
+      ],
+      "properties": {
+        "characterId": {
+          "type": "string",
+          "pattern": "^CHR-[A-Z0-9_-]+$"
+        },
+        "type": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+
+    "voiceProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "voiceType": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "accent": {
+          "type": "string"
+        },
+        "speakingSpeed": {
+          "type": "string"
+        },
+        "pitch": {
+          "type": "string"
+        }
+      }
+    },
+
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "createdAt",
+        "updatedAt",
+        "createdBy"
+      ],
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdBy": {
+          "type": "string"
+        },
+        "reviewedBy": {
+          "type": "string"
+        },
+        "approvedBy": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

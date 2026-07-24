@@ -1,0 +1,320 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://suro-buya.dev/schema/review.schema.json",
+  "title": "Review Package",
+  "description": "Canonical Review Package object for the Suro & Buya AI Engine.",
+  "type": "object",
+  "additionalProperties": false,
+
+  "required": [
+    "id",
+    "version",
+    "status",
+    "artifact",
+    "reviewType",
+    "validation",
+    "decision",
+    "reviewers",
+    "metadata"
+  ],
+
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^REV-[A-Z0-9_-]+$"
+    },
+
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "review",
+        "approved",
+        "production",
+        "published",
+        "archived"
+      ]
+    },
+
+    "artifact": {
+      "$ref": "#/$defs/artifact"
+    },
+
+    "reviewType": {
+      "type": "string",
+      "enum": [
+        "character",
+        "world",
+        "story",
+        "season",
+        "episode",
+        "scene",
+        "dialogue",
+        "visual",
+        "production"
+      ]
+    },
+
+    "validation": {
+      "$ref": "#/$defs/validation"
+    },
+
+    "decision": {
+      "$ref": "#/$defs/decision"
+    },
+
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+
+    "reviewers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/reviewer"
+      }
+    },
+
+    "history": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/history"
+      }
+    },
+
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    }
+  },
+
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+
+      "required": [
+        "type",
+        "id",
+        "title"
+      ],
+
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+
+        "id": {
+          "type": "string"
+        },
+
+        "title": {
+          "type": "string"
+        },
+
+        "version": {
+          "type": "string"
+        }
+      }
+    },
+
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+
+      "required": [
+        "passed"
+      ],
+
+      "properties": {
+        "passed": {
+          "type": "boolean"
+        },
+
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+
+        "issues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/issue"
+          }
+        }
+      }
+    },
+
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+
+      "required": [
+        "category",
+        "severity",
+        "message"
+      ],
+
+      "properties": {
+        "category": {
+          "type": "string",
+          "enum": [
+            "canon",
+            "timeline",
+            "character",
+            "story",
+            "dialogue",
+            "visual",
+            "production",
+            "technical"
+          ]
+        },
+
+        "severity": {
+          "type": "string",
+          "enum": [
+            "info",
+            "warning",
+            "error",
+            "critical"
+          ]
+        },
+
+        "message": {
+          "type": "string"
+        },
+
+        "recommendation": {
+          "type": "string"
+        }
+      }
+    },
+
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+
+      "required": [
+        "status"
+      ],
+
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "approved",
+            "approved-with-revision",
+            "needs-revision",
+            "rejected"
+          ]
+        },
+
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": false,
+
+      "required": [
+        "name",
+        "role"
+      ],
+
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+
+        "role": {
+          "type": "string",
+          "enum": [
+            "creator",
+            "editor",
+            "reviewer",
+            "ai-engine"
+          ]
+        },
+
+        "decision": {
+          "type": "string"
+        },
+
+        "comment": {
+          "type": "string"
+        }
+      }
+    },
+
+    "history": {
+      "type": "object",
+      "additionalProperties": false,
+
+      "required": [
+        "timestamp",
+        "event"
+      ],
+
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+
+        "event": {
+          "type": "string"
+        },
+
+        "actor": {
+          "type": "string"
+        }
+      }
+    },
+
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+
+      "required": [
+        "createdAt",
+        "updatedAt",
+        "createdBy"
+      ],
+
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+
+        "createdBy": {
+          "type": "string"
+        },
+
+        "reviewedBy": {
+          "type": "string"
+        },
+
+        "approvedBy": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

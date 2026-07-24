@@ -1,0 +1,252 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://suro-buya.dev/schema/story.schema.json",
+  "title": "Story",
+  "description": "Canonical Story object for the Suro & Buya AI Engine.",
+  "type": "object",
+  "additionalProperties": false,
+
+  "required": [
+    "id",
+    "version",
+    "status",
+    "title",
+    "summary",
+    "genre",
+    "themes",
+    "premise",
+    "targetAudience",
+    "timeline",
+    "characters",
+    "world",
+    "storyArcs",
+    "metadata"
+  ],
+
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique story identifier.",
+      "pattern": "^STR-[A-Z0-9_-]+$"
+    },
+
+    "version": {
+      "type": "string",
+      "description": "Semantic version.",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "review",
+        "approved",
+        "production",
+        "published",
+        "archived"
+      ]
+    },
+
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+
+    "subtitle": {
+      "type": "string"
+    },
+
+    "summary": {
+      "type": "string"
+    },
+
+    "logline": {
+      "type": "string"
+    },
+
+    "premise": {
+      "type": "string"
+    },
+
+    "genre": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+
+    "themes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+
+    "tone": {
+      "type": "string"
+    },
+
+    "targetAudience": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ageRange",
+        "market"
+      ],
+      "properties": {
+        "ageRange": {
+          "type": "string"
+        },
+        "market": {
+          "type": "string"
+        }
+      }
+    },
+
+    "timeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start",
+        "end"
+      ],
+      "properties": {
+        "start": {
+          "type": "string"
+        },
+        "end": {
+          "type": "string"
+        }
+      }
+    },
+
+    "world": {
+      "type": "string",
+      "description": "Reference to World object.",
+      "pattern": "^WRD-[A-Z0-9_-]+$"
+    },
+
+    "characters": {
+      "type": "array",
+      "description": "Character references.",
+      "items": {
+        "type": "string",
+        "pattern": "^CHR-[A-Z0-9_-]+$"
+      },
+      "uniqueItems": true
+    },
+
+    "storyArcs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/storyArc"
+      }
+    },
+
+    "seasons": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^SEA-[A-Z0-9_-]+$"
+      }
+    },
+
+    "canonRules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    }
+  },
+
+  "$defs": {
+    "storyArc": {
+      "type": "object",
+      "additionalProperties": false,
+
+      "required": [
+        "id",
+        "title",
+        "objective"
+      ],
+
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^ARC-[A-Z0-9_-]+$"
+        },
+
+        "title": {
+          "type": "string"
+        },
+
+        "summary": {
+          "type": "string"
+        },
+
+        "objective": {
+          "type": "string"
+        },
+
+        "episodes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^EPI-[A-Z0-9_-]+$"
+          }
+        }
+      }
+    },
+
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+
+      "required": [
+        "createdAt",
+        "updatedAt",
+        "createdBy"
+      ],
+
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+
+        "createdBy": {
+          "type": "string"
+        },
+
+        "reviewedBy": {
+          "type": "string"
+        },
+
+        "approvedBy": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

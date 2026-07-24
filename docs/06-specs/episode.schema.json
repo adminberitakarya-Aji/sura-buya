@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://suro-buya.dev/schema/episode.schema.json",
+  "title": "Episode",
+  "description": "Canonical Episode object for the Suro & Buya AI Engine.",
+  "type": "object",
+  "additionalProperties": false,
+
+  "required": [
+    "id",
+    "version",
+    "status",
+    "seasonId",
+    "episodeNumber",
+    "title",
+    "objective",
+    "summary",
+    "storyArc",
+    "timeline",
+    "characters",
+    "locations",
+    "scenes",
+    "metadata"
+  ],
+
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^EPI-[A-Z0-9_-]+$"
+    },
+
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "review",
+        "approved",
+        "production",
+        "published",
+        "archived"
+      ]
+    },
+
+    "seasonId": {
+      "type": "string",
+      "pattern": "^SEA-[A-Z0-9_-]+$"
+    },
+
+    "storyId": {
+      "type": "string",
+      "pattern": "^STR-[A-Z0-9_-]+$"
+    },
+
+    "episodeNumber": {
+      "type": "integer",
+      "minimum": 1
+    },
+
+    "title": {
+      "type": "string"
+    },
+
+    "summary": {
+      "type": "string"
+    },
+
+    "objective": {
+      "type": "string"
+    },
+
+    "theme": {
+      "type": "string"
+    },
+
+    "storyArc": {
+      "type": "string",
+      "pattern": "^ARC-[A-Z0-9_-]+$"
+    },
+
+    "timeline": {
+      "$ref": "#/$defs/timeline"
+    },
+
+    "characters": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^CHR-[A-Z0-9_-]+$"
+      },
+      "uniqueItems": true
+    },
+
+    "locations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^LOC-[A-Z0-9_-]+$"
+      },
+      "uniqueItems": true
+    },
+
+    "scenes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/scene"
+      }
+    },
+
+    "productionNotes": {
+      "type": "string"
+    },
+
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    }
+  },
+
+  "$defs": {
+    "timeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "position",
+        "duration"
+      ],
+      "properties": {
+        "position": {
+          "type": "string"
+        },
+        "duration": {
+          "type": "string"
+        }
+      }
+    },
+
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+
+      "required": [
+        "id",
+        "sceneNumber",
+        "title",
+        "objective",
+        "location",
+        "participants"
+      ],
+
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^SCN-[A-Z0-9_-]+$"
+        },
+
+        "sceneNumber": {
+          "type": "integer",
+          "minimum": 1
+        },
+
+        "title": {
+          "type": "string"
+        },
+
+        "objective": {
+          "type": "string"
+        },
+
+        "summary": {
+          "type": "string"
+        },
+
+        "location": {
+          "type": "string",
+          "pattern": "^LOC-[A-Z0-9_-]+$"
+        },
+
+        "participants": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^CHR-[A-Z0-9_-]+$"
+          },
+          "uniqueItems": true
+        },
+
+        "emotion": {
+          "type": "string"
+        },
+
+        "dialogueRequired": {
+          "type": "boolean"
+        }
+      }
+    },
+
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+
+      "required": [
+        "createdAt",
+        "updatedAt",
+        "createdBy"
+      ],
+
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+
+        "createdBy": {
+          "type": "string"
+        },
+
+        "reviewedBy": {
+          "type": "string"
+        },
+
+        "approvedBy": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

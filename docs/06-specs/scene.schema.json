@@ -1,0 +1,232 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://suro-buya.dev/schema/scene.schema.json",
+  "title": "Scene",
+  "description": "Canonical Scene object for the Suro & Buya AI Engine.",
+  "type": "object",
+  "additionalProperties": false,
+
+  "required": [
+    "id",
+    "version",
+    "status",
+    "episodeId",
+    "sceneNumber",
+    "title",
+    "objective",
+    "location",
+    "timeline",
+    "participants",
+    "beats",
+    "metadata"
+  ],
+
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^SCN-[A-Z0-9_-]+$"
+    },
+
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "review",
+        "approved",
+        "production",
+        "published",
+        "archived"
+      ]
+    },
+
+    "episodeId": {
+      "type": "string",
+      "pattern": "^EPI-[A-Z0-9_-]+$"
+    },
+
+    "sceneNumber": {
+      "type": "integer",
+      "minimum": 1
+    },
+
+    "title": {
+      "type": "string"
+    },
+
+    "summary": {
+      "type": "string"
+    },
+
+    "objective": {
+      "type": "string"
+    },
+
+    "location": {
+      "type": "string",
+      "pattern": "^LOC-[A-Z0-9_-]+$"
+    },
+
+    "timeline": {
+      "$ref": "#/$defs/timeline"
+    },
+
+    "participants": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^CHR-[A-Z0-9_-]+$"
+      }
+    },
+
+    "beats": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/beat"
+      }
+    },
+
+    "conflict": {
+      "type": "string"
+    },
+
+    "emotion": {
+      "type": "string"
+    },
+
+    "transitionIn": {
+      "type": "string"
+    },
+
+    "transitionOut": {
+      "type": "string"
+    },
+
+    "visualNotes": {
+      "type": "string"
+    },
+
+    "productionNotes": {
+      "type": "string"
+    },
+
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    }
+  },
+
+  "$defs": {
+    "timeline": {
+      "type": "object",
+      "additionalProperties": false,
+
+      "required": [
+        "timeOfDay"
+      ],
+
+      "properties": {
+        "timeOfDay": {
+          "type": "string"
+        },
+
+        "duration": {
+          "type": "string"
+        },
+
+        "storyTime": {
+          "type": "string"
+        }
+      }
+    },
+
+    "beat": {
+      "type": "object",
+      "additionalProperties": false,
+
+      "required": [
+        "beatNumber",
+        "description"
+      ],
+
+      "properties": {
+        "beatNumber": {
+          "type": "integer",
+          "minimum": 1
+        },
+
+        "description": {
+          "type": "string"
+        },
+
+        "participants": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^CHR-[A-Z0-9_-]+$"
+          }
+        },
+
+        "emotion": {
+          "type": "string"
+        },
+
+        "dialogueRequired": {
+          "type": "boolean"
+        },
+
+        "cameraHint": {
+          "type": "string"
+        }
+      }
+    },
+
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+
+      "required": [
+        "createdAt",
+        "updatedAt",
+        "createdBy"
+      ],
+
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+
+        "createdBy": {
+          "type": "string"
+        },
+
+        "reviewedBy": {
+          "type": "string"
+        },
+
+        "approvedBy": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
