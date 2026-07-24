@@ -1,0 +1,56 @@
+{
+  "error_id": "ERR-SB-001",
+  "version": "1.0",
+  "timestamp": "2026-01-01T00:00:00Z",
+
+  "request_reference": {
+    "request_id": "REQ-SB-001"
+  },
+
+  "status": {
+    "code": "FAILED",
+    "http_status": 400
+  },
+
+  "error": {
+    "type": "VALIDATION_ERROR",
+
+    "category": "CANON_VIOLATION",
+
+    "message": "Generated content violates Universe Bible rules",
+
+    "detail": "Character ability is not defined in Character Bible"
+  },
+
+  "location": {
+    "component": "Validation Runtime",
+
+    "stage": "Canon Validation",
+
+    "workflow_id": "EPISODE_GENERATION",
+
+    "execution_id": "EXEC-SB-001"
+  },
+
+  "context": {
+    "object_type": "episode",
+
+    "object_id": "EP-SB-001",
+
+    "field": "character.ability"
+  },
+
+  "resolution": {
+    "action": "REVISION_REQUIRED",
+
+    "suggestion": "Remove unsupported ability or update approved canon"
+  },
+
+  "metadata": {
+    "engine_version": "1.0",
+
+    "source": "Suro-Buya-Engine",
+
+    "trace_id": "TRACE-SB-001"
+  }
+}

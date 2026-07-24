@@ -1,0 +1,81 @@
+{
+  "request_id": "REQ-SB-001",
+  "version": "1.0",
+  "timestamp": "2026-01-01T00:00:00Z",
+
+  "client": {
+    "application": "Suro & Buya Creator Studio",
+    "client_version": "1.0"
+  },
+
+  "request": {
+    "type": "CREATE_EPISODE",
+    "intent": "Create a new Suro & Buya episode",
+    "priority": "normal"
+  },
+
+  "universe_reference": {
+    "universe_id": "SURO-BUYA",
+    "bible_version": "1.0"
+  },
+
+  "input": {
+    "creator_instruction": "Create an adventure episode about protecting nature",
+
+    "target": {
+      "type": "episode",
+      "id": null
+    },
+
+    "context": {
+      "character_ids": [
+        "SURO",
+        "BUYA"
+      ],
+
+      "world_ids": [],
+
+      "story_reference": null
+    }
+  },
+
+  "workflow": {
+    "workflow_id": "EPISODE_GENERATION",
+    "workflow_version": "1.0"
+  },
+
+  "execution": {
+    "mode": "standard",
+
+    "options": {
+      "enable_validation": true,
+      "enable_review": true,
+      "enable_production_package": false
+    }
+  },
+
+  "constraints": {
+    "canon_strict": true,
+
+    "allow_new_character": false,
+
+    "allow_new_world_element": false
+  },
+
+  "output": {
+    "expected_type": "episode",
+
+    "schema": "episode.schema.json",
+
+    "format": "json"
+  },
+
+  "metadata": {
+    "created_by": "creator",
+    "source": "creator-studio",
+    "tags": [
+      "episode",
+      "story-generation"
+    ]
+  }
+}
