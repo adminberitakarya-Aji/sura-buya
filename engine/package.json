@@ -1,0 +1,22 @@
+{
+  "name": "@sura-buya/engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI Factory vertical slice - loads Universe Bible, builds context, generates content via Claude, validates against Canon Rules.",
+  "type": "module",
+  "scripts": {
+    "generate-scene": "tsx src/commands/generate-scene.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.0",
+    "dotenv": "^16.4.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "@types/node": "^22.7.0"
+  }
+}
