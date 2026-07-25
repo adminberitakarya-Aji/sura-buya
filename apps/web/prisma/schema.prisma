@@ -1,0 +1,357 @@
+// apps/web/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  passwordHash  String?
+  image         String?
+  role          UserRole  @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  accounts      Account[]
+  sessions      Session[]
+  universes     UniverseMember[]
+  reviews       Review[]
+  ownedUniverses Universe[] @relation("UniverseOwner")
+  generationJobs GenerationJob[] @relation("GenerationJobUser")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  OWNER
+}
+
+model Universe {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?  @db.Text
+  manifest    Json     // universe.yaml parsed
+  version     String   @default("1.0.0")
+  ownerId     String
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner            User            @relation("UniverseOwner", fields: [ownerId], references: [id])
+  members          UniverseMember[]
+  characters       Character[]
+  episodes         Episode[]
+  canonRules       CanonRule[]
+  aiConfigs        AIConfig[]
+  regions          Region[]         @relation("RegionUniverse")
+  seasons          Season[]         @relation("SeasonUniverse")
+  generationJobs   GenerationJob[]  @relation("GenerationJobUniverse")
+}
+
+model UniverseMember {
+  id         String        @id @default(cuid())
+  userId     String
+  universeId String
+  role       MemberRole    @default(EDITOR)
+  joinedAt   DateTime      @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  universe Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, universeId])
+}
+
+enum MemberRole {
+  OWNER
+  EDITOR
+  REVIEWER
+  VIEWER
+}
+
+model Character {
+  id           String   @id @default(cuid())
+  universeId   String
+  characterId  String   // "hero", "sidekick" — unique per universe
+  name         String
+  role         CharacterRole
+  displayName  String
+  description  String?  @db.Text
+  coreTraits   String[] // ["brave", "curious"]
+  coreWeakness String
+  voiceGuide   String?  @db.Text
+  bibleRef     String?  // path to bible file
+  metadata     Json?
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  universe Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
+
+  @@unique([universeId, characterId])
+}
+
+enum CharacterRole {
+  PROTAGONIST
+  DEUTERAGONIST
+  SUPPORTING
+  ANTAGONIST
+  NARRATOR
+}
+
+model Region {
+  id            String   @id @default(cuid())
+  universeId    String
+  regionId      String   // "jatim", "bali" — unique per universe
+  name          String
+  description   String?  @db.Text
+  cultureGuide  String?  @db.Text
+  geography     String?  @db.Text
+  metadata      Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  universe Universe @relation("RegionUniverse", fields: [universeId], references: [id], onDelete: Cascade)
+
+  @@unique([universeId, regionId])
+}
+
+model Season {
+  id          String   @id @default(cuid())
+  universeId  String
+  seasonNumber Int
+  title       String
+  theme       String?  @db.Text
+  arcSummary  String?  @db.Text
+  episodeCount Int     @default(10)
+  status      SeasonStatus @default(PLANNING)
+  plan        Json?    // SeasonPlan schema
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  universe Universe  @relation("SeasonUniverse", fields: [universeId], references: [id], onDelete: Cascade)
+  episodes Episode[]
+
+  @@unique([universeId, seasonNumber])
+}
+
+enum SeasonStatus {
+  PLANNING
+  IN_PROGRESS
+  COMPLETED
+  ARCHIVED
+}
+
+model Episode {
+  id           String        @id @default(cuid())
+  universeId   String
+  seasonId     String
+  episodeNumber Int
+  title        String
+  premise      String        @db.Text
+  status       EpisodeStatus @default(PLANNING)
+  plan         Json?         // EpisodePlan schema
+  targetScenes Int           @default(6)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  universe Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
+  season   Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  scenes   Scene[]
+
+  @@unique([seasonId, episodeNumber])
+}
+
+enum EpisodeStatus {
+  PLANNING
+  GENERATING
+  REVIEW
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+}
+
+model Scene {
+  id              String   @id @default(cuid())
+  episodeId       String
+  sceneNumber     Int
+  premise         String   @db.Text
+  characters      String[] // characterIds
+  region          String?
+  generatedText   String?  @db.Text
+  validationReport Json?
+  version         Int      @default(1)
+  status          SceneStatus @default(DRAFT)
+  metadata        Json?    // token usage, model, latency, etc.
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  reviews Review[]
+
+  @@unique([episodeId, sceneNumber])
+}
+
+enum SceneStatus {
+  DRAFT
+  GENERATED
+  VALIDATED
+  APPROVED
+  REJECTED
+}
+
+model CanonRule {
+  id          String   @id @default(cuid())
+  universeId  String
+  ruleId      String   // "no-violence", "weakness-must-have-consequence"
+  name        String
+  description String   @db.Text
+  ruleType    RuleType
+  pattern     String?  // regex for rule-based
+  severity    Severity @default(WARNING)
+  isActive    Boolean  @default(true)
+  metadata    Json?    // LLM judge prompt, etc.
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  universe Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
+
+  @@unique([universeId, ruleId])
+}
+
+enum RuleType {
+  BANNED_WORD
+  REQUIRED_ELEMENT
+  STRUCTURE
+  CHARACTER_CONSISTENCY
+  CUSTOM_LLM
+}
+
+enum Severity {
+  ERROR
+  WARNING
+  INFO
+}
+
+model AIConfig {
+  id          String   @id @default(cuid())
+  universeId  String
+  task        AITask
+  provider    String   // "anthropic", "openai", "cohere"
+  model       String   // "claude-3-5-sonnet", "gpt-4o"
+  apiKeyRef   String?  // reference to encrypted secret
+  parameters  Json?    // temperature, maxTokens, etc.
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  universe Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
+
+  @@unique([universeId, task])
+}
+
+enum AITask {
+  CREATIVE_GENERATION
+  PLANNING
+  VALIDATION
+  EMBEDDING
+  IMAGE_PROMPT
+  CODE_GENERATION
+}
+
+model Review {
+  id          String       @id @default(cuid())
+  sceneId     String
+  reviewerId  String
+  decision    ReviewDecision
+  feedback    String?      @db.Text
+  annotations Json?        // inline comments
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  scene     Scene @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  reviewer  User  @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+}
+
+enum ReviewDecision {
+  APPROVE
+  REQUEST_CHANGES
+  REJECT
+}
+
+model GenerationJob {
+  id          String        @id @default(cuid())
+  universeId  String
+  userId      String
+  type        JobType
+  status      JobStatus     @default(PENDING)
+  input       Json
+  output      Json?
+  progress    Int           @default(0)
+  currentStep String?
+  error       String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime      @default(now())
+
+  user     User     @relation("GenerationJobUser", fields: [userId], references: [id], onDelete: Cascade)
+  universe Universe @relation("GenerationJobUniverse", fields: [universeId], references: [id], onDelete: Cascade)
+}
+
+enum JobType {
+  SCENE_GENERATION
+  EPISODE_PLANNING
+  SEASON_PLANNING
+  CANON_VALIDATION
+  EMBEDDING_INDEX
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}

@@ -71,78 +71,70 @@ suro-buya/
 │   │   └── prisma/
 │   │       └── schema.prisma
 │   │
+│   ├── cli/                    # CLI Tools (create-universe, generate, validate)
+│   │   ├── src/
+│   │   │   └── index.ts        # Single-file CLI with CommandRegistry (Phase 0)
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   │
 │   └── docs/                   # Documentation site (Future)
 │
 ├── packages/
-│   ├── core/                   # Shared types, Zod schemas, constants
+│   ├── config/                 # Shared configs (ESLint, Prettier, TypeScript)
+│   │   ├── eslint.config.cjs
+│   │   ├── prettier.config.cjs
+│   │   ├── tsconfig.base.json
+│   │   ├── tsconfig.json
+│   │   └── package.json
+│   │
+│   ├── shared/                 # Shared types, Zod schemas, constants (was packages/core)
 │   │   ├── src/
 │   │   │   ├── types/          # Universe, Character, Episode, Scene, etc.
 │   │   │   ├── schemas/        # Zod validation schemas
 │   │   │   ├── constants/      # Enums, default values
 │   │   │   └── utils/          # Pure functions
+│   │   ├── tests/
 │   │   └── package.json
 │   │
-│   ├── engine/                 # AI Factory Core (universe-agnostic)
+│   ├── engine-v2/              # AI Factory Core v2 (universe-agnostic)
 │   │   ├── src/
-│   │   │   ├── bible/          # BibleLoader, BibleIndexer
-│   │   │   ├── context/        # ContextBuilder, TokenBudget
-│   │   │   ├── prompt/         # PromptTemplate, FewShotRegistry
-│   │   │   ├── generate/       # GenerationOrchestrator, StreamingHandler
-│   │   │   ├── validate/       # CanonValidator (RuleEngine + LLMJudge)
-│   │   │   ├── plan/           # EpisodePlanner, SeasonPlanner
+│   │   │   ├── bible/          # BibleLoader, BibleIndexer, ContextBuilder
 │   │   │   ├── ai/             # Provider abstraction, clients
-│   │   │   │   ├── providers/
-│   │   │   │   │   ├── anthropic.ts
-│   │   │   │   │   ├── openai.ts
-│   │   │   │   │   ├── cohere.ts
-│   │   │   │   │   └── base.ts
-│   │   │   │   ├── registry.ts
-│   │   │   │   └── types.ts
-│   │   │   ├── embed/          # EmbeddingService, VectorStore
-│   │   │   ├── events/         # EventEmitter for progress streaming
+│   │   │   │   ├── providers.ts
+│   │   │   │   └── registry.ts
+│   │   │   ├── generate/       # GenerationOrchestrator
+│   │   │   │   └── orchestrator.ts
+│   │   │   ├── plan/           # EpisodePlanner, SeasonPlanner
+│   │   │   │   ├── episode-planner.ts
+│   │   │   │   └── season-planner.ts
+│   │   │   ├── prompt/         # PromptTemplate, FewShotRegistry
+│   │   │   │   └── template.ts
+│   │   │   ├── validate/       # CanonValidator (RuleEngine + LLMJudge)
+│   │   │   │   └── canon.ts
+│   │   │   ├── commands.ts     # CLI command definitions & handlers
+│   │   │   ├── context.ts      # Context types
+│   │   │   ├── generate.ts     # Generation types
+│   │   │   ├── validate.ts     # Validation types
+│   │   │   ├── types.ts        # Core types
 │   │   │   └── index.ts
 │   │   ├── tests/
 │   │   └── package.json
 │   │
-│   ├── cli/                    # CLI Tools (create-universe, generate, validate)
-│   │   ├── src/
-│   │   │   ├── commands/
-│   │   │   │   ├── create-universe.ts
-│   │   │   │   ├── generate-scene.ts
-│   │   │   │   ├── generate-episode.ts
-│   │   │   │   ├── generate-season.ts
-│   │   │   │   ├── validate-universe.ts
-│   │   │   │   └── index.ts
-│   │   │   ├── utils/
-│   │   │   └── index.ts
-│   │   └── package.json
-│   │
-│   ├── templates/              # Universe starter templates
-│   │   ├── universe/
-│   │   │   ├── universe.yaml.template
-│   │   │   ├── bible/
-│   │   │   │   ├── 01-character-bible/
-│   │   │   │   ├── 02-world-bible/
-│   │   │   │   ├── 03-story-bible/
-│   │   │   │   ├── 04-visual-bible/
-│   │   │   │   └── 05-production-bible/
-│   │   │   └── README.md
-│   │   └── package.json
-│   │
-│   └── ui/                     # Shared React components (shadcn/ui based)
-│       ├── src/
-│       │   ├── components/
-│       │   │   ├── ui/         # Base components (Button, Input, Card, etc.)
-│       │   │   ├── forms/      # CharacterForm, EpisodeForm, etc.
-│       │   │   ├── editors/    # MarkdownEditor, BibleEditor
-│       │   │   ├── generation/ # AIGenerateWizard, ProgressStream
-│       │   │   ├── review/     # ReviewPackage, DiffViewer
-│       │   │   ├── planning/   # SeasonArcVisualizer, BeatBoard
-│       │   │   └── validation/ # CanonValidatorPanel
-│       │   ├── hooks/
-│       │   ├── lib/
-│       │   └── styles/
-│       └── package.json
+│   └── templates/
+│       └── universe/           # Universe template package (TypeScript modular)
+│           ├── src/
+│           │   ├── api/        # API schemas (request/response/error)
+│           │   ├── creator/    # Creator-facing template modules
+│           │   ├── engine/     # Engine-facing template modules
+│           │   ├── prompt/     # Prompt templates
+│           │   └── schemas/    # Zod schemas for validation
+│           ├── engine/         # Engine markdown docs (context, execution, planning, etc.)
+│           ├── prompt/         # Prompt markdown files (generation, planning, validation, etc.)
+│           ├── schema/         # Schema markdown docs (metadata, object, versioning)
+│           ├── creator/        # Creator markdown templates (character, episode, world, etc.)
+│           ├── api/            # API example JSONs
+│           ├── tests/
+│           └── package.json
 │
 ├── universes/                  # Runtime universes (gitignored)
 │   └── suro-buya/              # Reference universe (migrated from universe-bible/)
@@ -957,18 +949,18 @@ PATCH  /api/universes/:id/ai-config/:task
 
 | Task | Description | Files | Done |
 |------|-------------|-------|------|
-| 0.1 | Init monorepo: `pnpm-workspace.yaml`, root `package.json`, turbo config in CI | 3 files | [x] |
+| 0.1 | Init monorepo: `pnpm-workspace.yaml`, root `package.json`, turbo config in CI, **shared configs (ESLint, Prettier, TypeScript)** | 4+ files | [x] |
 | 0.2 | Setup `packages/shared` (was `packages/core`): types, Zod schemas, constants, utils | `packages/shared/src/` | [x] |
 | 0.3 | Setup `packages/engine-v2`: skeleton with interface definitions (types, commands, validate, generate, context) | `packages/engine-v2/src/` | [x] |
-| 0.4 | Setup `packages/templates/universe` (was `packages/ui`): template schemas, creator/engine/prompt modules | `packages/templates/universe/` | [x] |
+| 0.4 | Setup `packages/templates/universe` (was `packages/ui`): **TypeScript modular package** with template schemas, creator/engine/prompt modules, markdown docs | `packages/templates/universe/` | [x] |
 | 0.5 | Setup `apps/web`: Next.js 14, Tailwind, Prisma, NextAuth (Cred/GitHub/Google) — **basic setup only** | `apps/web/` | [x] |
-| 0.6 | Setup `apps/cli`: commander.js commands (init, generate:scene, generate:episode, validate, status) | `apps/cli/src/` | [x] |
-| 0.7 | Setup `packages/templates`: universe templates with creator/engine/prompt modules | `packages/templates/universe/` | [x] |
-| 0.8 | Configure TypeScript strict, ESLint, Prettier across all packages | Config files | [x] |
+| 0.6 | Setup `apps/cli`: **single-file CLI with CommandRegistry** (init, generate:scene, generate:episode, validate, status) | `apps/cli/src/` | [x] |
+| 0.7 | Setup `packages/config`: **shared ESLint, Prettier, TypeScript configs** for workspace consistency | `packages/config/` | [x] |
+| 0.8 | Configure TypeScript strict, ESLint, Prettier across all packages (via packages/config) | Config files | [x] |
 | 0.9 | GitHub Actions CI: typecheck, lint, test, build | `.github/workflows/ci.yml` | [x] |
 | 0.10 | Environment setup: `.env.example` with all required vars | `.env.example` | [x] |
 
-**Deliverable:** `pnpm build` passes, `pnpm dev` starts web + CLI works.
+**Deliverable:** `pnpm build` passes, `pnpm dev` starts web + CLI works, `pnpm lint` & `pnpm typecheck` pass via shared configs.
 
 ---
 

@@ -1,273 +1,317 @@
-# SURO & BUYA — UNIVERSE BIBLE
+# Suro-Buya Universe — AI Factory Multi-Universe
 
-> **Official Universe Bible** untuk IP **Suro & Buya: Petualang Cilik Nusantara**.
+> **Monorepo untuk pengembangan IP Universe anak-anak Indonesia (Suro & Buya) dengan AI Factory yang production-ready.**
 
-Repository ini merupakan **single source of truth** untuk seluruh pengembangan IP **Suro & Buya**.
-
-Semua informasi mengenai karakter, dunia, cerita, visual, hingga proses produksi harus mengacu pada dokumen di repository ini.
-
-Apabila terjadi perbedaan antara isi repository ini dengan chat, diskusi, catatan pribadi, atau ingatan siapa pun, maka **dokumen di repository ini adalah sumber yang dianggap benar**.
-
----
-
-# Vision
-
-Membangun sebuah **Intellectual Property (IP)** cerita anak Indonesia yang memperkenalkan budaya, alam, dan keberagaman Nusantara melalui petualangan dua sahabat dari Surabaya.
-
-Universe Bible ini dibuat agar seluruh pengembangan IP tetap konsisten meskipun dikerjakan oleh banyak penulis, ilustrator, animator, maupun AI.
+[![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
+[![pnpm](https://img.shields.io/badge/pnpm-8.14+-orange.svg)](https://pnpm.io/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-blue.svg)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
-# Repository Structure
+## 📖 Tentang Project
 
-```
-universe-bible/
-├── 01-character-bible/     → Siapa mereka
-├── 02-world-bible/         → Dunia tempat mereka hidup
-├── 03-story-bible/         → Bagaimana cerita mereka dibangun
-├── 04-visual-bible/        → Bagaimana mereka terlihat
-├── 05-production-bible/    → Bagaimana IP ini diproduksi & dikembangkan
-└── CHANGELOG.md
-```
+**Suro-Buya Universe** adalah platform AI Factory untuk menciptakan, mengelola, dan memproduksi *IP Universe* anak-anak Indonesia secara end-to-end. Mulai dari pembuatan *universe bible* (character, world, story, visual, production), perencanaan season/episode, generasi scene via AI, validasi kanonisasi, hingga review & approve — semua dalam satu platform terintegrasi.
+
+### Universe Referensi: **Suro & Buya**
+- **Suro** — Anak laki-laki 10 th, penasaran, berani, suka petualangan
+- **Buya** — Anak perempuan 10 th, cerdas, tenang, pemecah masalah
+- **Setting**: Nusantara modern-fantasy, budaya Jawa-Timur kaya makna
+- **Target**: Anak 7–12 tahun, keluarga Indonesia
 
 ---
 
-# Repository Philosophy
-
-Universe Bible dipisahkan menjadi beberapa bagian agar setiap dokumen memiliki tanggung jawab yang jelas (**Single Responsibility**).
-
-- **Character Bible** hanya membahas karakter.
-- **World Bible** hanya membahas dunia.
-- **Story Bible** hanya membahas storytelling.
-- **Visual Bible** hanya membahas visual.
-- **Production Bible** hanya membahas proses produksi.
-
-Tidak ada informasi yang diduplikasi apabila tidak diperlukan.
-
----
-
-# How to Use
-
-### Untuk Penulis
-
-Mulailah dari:
+## 🏗 Arsitektur Monorepo
 
 ```
-01-character-bible
-↓
-02-world-bible
-↓
-03-story-bible
-```
-
----
-
-### Untuk Ilustrator
-
-Mulailah dari:
-
-```
-01-character-bible
-↓
-04-visual-bible
-```
-
----
-
-### Untuk Animator
-
-Gunakan:
-
-```
-01-character-bible
-02-world-bible
-04-visual-bible
+suro-buya/
+├── apps/
+│   ├── web/                    # Next.js 14 — Dashboard + API (Creator Portal)
+│   │   ├── src/app/            # App Router pages & API routes
+│   │   ├── src/lib/            # Auth, DB, AI clients
+│   │   ├── src/components/     # Page-specific components
+│   │   └── prisma/             # Database schema
+│   │
+│   └── cli/                    # CLI Tools (create-universe, generate, validate)
+│       └── src/commands/
+│
+├── packages/
+│   ├── shared/                 # Shared types, Zod schemas, constants, utils
+│   │   └── src/types/, schemas/, constants/, utils/
+│   │
+│   ├── engine-v2/              # AI Factory Core (universe-agnostic)
+│   │   ├── src/
+│   │   │   ├── bible/          # BibleLoader, BibleIndexer, ContextBuilder
+│   │   │   ├── prompt/         # PromptTemplate, FewShotRegistry
+│   │   │   ├── generate/       # GenerationOrchestrator, StreamingHandler
+│   │   │   ├── validate/       # CanonValidator (RuleEngine + LLMJudge)
+│   │   │   ├── plan/           # EpisodePlanner, SeasonPlanner
+│   │   │   ├── ai/             # Provider abstraction (Anthropic, OpenAI, Cohere)
+│   │   │   ├── embed/          # EmbeddingService, VectorStore
+│   │   │   └── events/         # EventEmitter for progress streaming
+│   │   └── tests/
+│   │
+│   ├── templates/              # Universe starter templates
+│   │   └── universe/
+│   │       ├── universe.yaml.template
+│   │       └── bible/          # 5 bible categories templates
+│   │
+│   └── config/                 # Shared ESLint, TypeScript, Prettier configs
+│
+├── universes/                  # Runtime universes (gitignored)
+│   └── suro-buya/              # Reference universe (migrated from universe-bible/)
+│
+├── docs/                       # Documentation (architecture, guides, specs)
+│   ├── 00-foundation/          # Technical decisions, ADRs
+│   ├── 01-creator/             # Creator workflow guides
+│   ├── 02-engine/              # Engine internals
+│   ├── 03-production/          # Production ops
+│   └── ...
+│
+├── turbo.json                  # Turborepo pipeline config
+├── package.json                # Root scripts & workspaces
+├── pnpm-workspace.yaml
+├── tsconfig.json
+├── .env.example
+└── README.md
 ```
 
 ---
 
-### Untuk AI
+## 🚀 Quick Start
 
-Gunakan seluruh Universe Bible sebagai referensi.
+### Prasyarat
+- **Node.js** ≥ 20.0.0
+- **pnpm** ≥ 8.14.0 (`corepack enable pnpm`)
+- **PostgreSQL** (local atau Neon/Vercel Postgres)
+- **API Keys**: Anthropic, OpenAI, Cohere (lihat `.env.example`)
 
-Urutan prioritas:
+### Instalasi
 
-```
-Character
-↓
+```bash
+# Clone & install dependencies
+git clone https://github.com/adminberitakarya-Aji/sura-buya.git
+cd suro-buya
+pnpm install
 
-World
-↓
+# Setup environment
+cp .env.example .env
+# Edit .env dengan credentials Anda
 
-Story
-↓
+# Setup database
+pnpm --filter @suro-buya/web db:generate
+pnpm --filter @suro-buya/web db:push
 
-Visual
-↓
+# Build semua packages
+pnpm build
 
-Production
-```
-
----
-
-# Development Order
-
-Urutan pengembangan Universe Bible mengikuti proses kreatif IP.
-
-```
-Character
-        ↓
-World
-        ↓
-Story
-        ↓
-Visual
-        ↓
-Production
+# Development
+pnpm dev          # Start web dev server (Next.js)
+pnpm --filter @suro-buya/cli dev  # CLI development mode
 ```
 
-Karakter selalu menjadi fondasi.
+### Perintah Berguna
 
-Dunia dibangun berdasarkan karakter.
+```bash
+# Development
+pnpm dev                    # Web dashboard di http://localhost:3000
+pnpm build                  # Build semua packages
+pnpm build:engine           # Build engine-v2 saja
+pnpm build:web              # Build web app saja
 
-Cerita lahir dari dunia tersebut.
+# Database
+pnpm --filter @suro-buya/web db:studio    # Prisma Studio
+pnpm --filter @suro-buya/web db:seed      # Seed database
 
-Visual menerjemahkan semuanya.
+# Testing & Quality
+pnpm test                   # Jalankan semua test
+pnpm lint                   # Lint semua packages
+pnpm typecheck              # TypeScript check
+pnpm format                 # Prettier format
 
-Production memastikan semuanya dapat diproduksi secara konsisten.
-
----
-
-# Status Legend
-
-| Status | Arti |
-|---------|------|
-| ✅ | Selesai & menjadi acuan resmi |
-| ⏳ | Draft, masih dapat berubah |
-| 🚧 | Belum dibuat |
-
----
-
-# Contents
-
-## 01 · Character Bible
-
-Siapa Suro & Buya.
-
-| File | Status |
-|------|--------|
-| 00-overview.md | ⏳ |
-| 01-suro.md | ⏳ |
-| 02-buya.md | ⏳ |
-| 03-relationship-dynamic.md | ⏳ |
-| 04-voice-guide.md | ⏳ |
-| 05-supporting-cast.md | ⏳ |
-
----
-
-## 02 · World Bible
-
-Dunia tempat Suro & Buya hidup.
-
-| File | Status |
-|------|--------|
-| 00-overview.md | ⏳ |
-| 01-geography-setting.md | ⏳ |
-| 02-lore.md | ⏳ |
-| 03-canon-rules.md | ⏳ |
-| 04-regional-culture-guide.md | ⏳ |
-
----
-
-## 03 · Story Bible
-
-Bagaimana cerita dibangun.
-
-| File | Status |
-|------|--------|
-| 00-overview.md | ⏳ |
-| 01-season-structure.md | ⏳ |
-| 02-episode-formula.md | ⏳ |
-| 03-character-arcs.md | ⏳ |
-| 04-themes-per-season.md | ⏳ |
-| 05-story-dos-donts.md | ⏳ |
-| episodes/episode-01-draft.md | 🚧 |
-
----
-
-## 04 · Visual Bible
-
-Seluruh panduan visual.
-
-| File | Status |
-|------|--------|
-| 00-overview.md | ⏳ |
-| 01-visual-style-guide.md | ⏳ |
-| 02-art-direction.md | ⏳ |
-| 03-environment-design.md | ⏳ |
-| 04-ai-prompt-bible.md | ⏳ |
-| 05-model-sheets.md | ⏳ |
-
----
-
-## 05 · Production Bible
-
-Panduan produksi dan pengembangan IP.
-
-| File | Status |
-|------|--------|
-| 00-overview.md | ⏳ |
-| 01-franchise-guide.md | ⏳ |
-| 02-production-pipeline.md | ⏳ |
-| 03-qa-checklist.md | ⏳ |
-| 04-brand-protection.md | ⏳ |
-
----
-
-# Governance
-
-## Single Source of Truth
-
-Semua keputusan resmi mengenai IP harus tercatat di repository ini.
-
-Percakapan, diskusi, atau keputusan yang belum didokumentasikan dianggap **belum resmi**.
-
----
-
-## Changelog
-
-Setiap perubahan wajib dicatat pada:
-
-```
-CHANGELOG.md
+# CLI Commands
+pnpm --filter @suro-buya/cli create-universe
+pnpm --filter @suro-buya/cli generate:scene
+pnpm --filter @suro-buya/cli generate:episode
+pnpm --filter @suro-buya/cli validate:universe
 ```
 
 ---
 
-## Design Principles
+## 📦 Packages Overview
 
-Universe Bible mengikuti prinsip:
-
-- Single Source of Truth
-- Single Responsibility
-- Canon First
-- Consistency Over Convenience
-- Documentation Before Production
-
----
-
-# Project Status
-
-Universe Bible masih dalam tahap pengembangan.
-
-Dokumen yang telah berstatus **✅** dianggap sebagai canon resmi dan menjadi acuan bagi seluruh proses produksi.
+| Package | Deskripsi | Entry Point |
+|---------|-----------|-------------|
+| `@suro-buya/shared` | Shared types, Zod schemas, constants, utilities | `packages/shared/src/index.ts` |
+| `@suro-buya/engine-v2` | AI Factory core: bible, context, prompt, generate, validate, plan, ai | `packages/engine-v2/src/index.ts` |
+| `@suro-buya/templates` | Universe starter templates (creator/engine/prompt modules) | `packages/templates/universe/` |
+| `@suro-buya/config` | Shared ESLint, TypeScript, Prettier configs | `packages/config/` |
+| `@suro-buya/web` | Next.js 14 Dashboard + API (Creator Portal) | `apps/web/` |
+| `@suro-buya/cli` | CLI tools untuk universe management | `apps/cli/src/index.ts` |
 
 ---
 
-# License
+## 🔐 Environment Variables
 
-Copyright © Suro & Buya.
+Salin `.env.example` ke `.env` dan isi:
 
-All Rights Reserved.
+```env
+# Database
+DATABASE_URL="postgresql://user:pass@localhost:5432/surobuya?schema=public"
 
-Seluruh karakter, cerita, desain, dan dokumentasi merupakan bagian dari Intellectual Property (IP) **Suro & Buya**.
+# NextAuth
+NEXTAUTH_SECRET="your-secret-key-min-32-chars"
+NEXTAUTH_URL="http://localhost:3000"
+
+# OAuth Providers (optional)
+GITHUB_CLIENT_ID=""
+GITHUB_CLIENT_SECRET=""
+GOOGLE_CLIENT_ID=""
+GOOGLE_CLIENT_SECRET=""
+
+# AI Providers
+ANTHROPIC_API_KEY=""
+OPENAI_API_KEY=""
+COHERE_API_KEY=""
+
+# File Storage
+BIBLE_ROOT_PATH="./universes"
+```
+
+---
+
+## 🏃‍♂️ Workflow Creator (End-to-End)
+
+```mermaid
+graph LR
+    A[Create Universe] --> B[Write Bible]
+    B --> C[Plan Season]
+    C --> D[Plan Episode]
+    D --> E[Generate Scene]
+    E --> F[Validate Canon]
+    F --> G[Review & Approve]
+    G --> H[Export/Publish]
+```
+
+1. **Create Universe** — Wizard 5 langkah: manifest, characters, world, story, settings
+2. **Write Bible** — Editor markdown untuk 5 kategori bible (character, world, story, visual, production)
+3. **Plan Season** — Arc visualizer, character milestones, episode beats
+4. **Plan Episode** — Beat board, scene breakdown, target scenes
+5. **Generate Scene** — AI generation dengan context-aware prompts, streaming progress
+6. **Validate Canon** — Rule engine (regex) + LLM Judge untuk konsistensi karakter & larangan
+7. **Review & Approve** — Side-by-side diff, annotate, approve/request changes/reject
+8. **Export** — Markdown, JSON, PDF, atau publish ke platform
+
+---
+
+## 🤖 AI Provider Configuration
+
+| Task | Primary | Fallback | Use Case |
+|------|---------|----------|----------|
+| Creative Generation | Claude 3.5 Sonnet | GPT-4o | Scene writing, dialogue |
+| Planning | GPT-4o | Claude 3.5 Sonnet | Season/episode planning, JSON output |
+| Validation | Claude 3.5 Haiku | GPT-4o-mini | Canon checking, fast & cheap |
+| Embedding | Cohere v3 | OpenAI text-emb-3-small | Bible indexing, semantic search |
+| Image Prompt | GPT-4o | Claude 3.5 Sonnet | Visual prompt generation |
+| Code Generation | Claude 3.5 Sonnet | GPT-4o | Template code, scripts |
+
+**Budget Bulan 1**: ~$68 dari $200 (lihat `IMPLEMENTATION-PLAN.md` Section 5)
+
+---
+
+## 📚 Dokumentasi
+
+| Dokumen | Deskripsi |
+|---------|-----------|
+| `IMPLEMENTATION-PLAN.md` | Rencana implementasi detail 8 minggu (Phase 0-4) |
+| `docs/00-foundation/` | Keputusan teknis, ADR, glossary |
+| `docs/01-creator/` | Panduan workflow creator |
+| `docs/02-engine/` | Arsitektur engine, interfaces |
+| `docs/07-engine-spec/` | Spec teknis engine core |
+| `docs/08-implementation-design/` | Desain implementasi per fase |
+
+---
+
+## 🧪 Testing
+
+```bash
+# Unit tests
+pnpm test
+
+# Watch mode
+pnpm test:watch
+
+# Coverage
+pnpm test:coverage
+
+# Integration tests (engine-v2)
+pnpm --filter @suro-buya/engine-v2 test:integration
+```
+
+Target coverage: **≥80%** untuk engine core (loader, context, validator, orchestrator).
+
+---
+
+## 🚢 Deployment
+
+### Vercel (Web App)
+```bash
+# Connect repo ke Vercel, set environment variables
+# Auto-deploy on push to main
+```
+
+### Database
+- **Development**: Local PostgreSQL / Docker
+- **Production**: Vercel Postgres / Neon / Supabase
+
+### CI/CD (GitHub Actions)
+- `.github/workflows/ci.yml` — Typecheck, lint, test, build
+- `.github/workflows/deploy.yml` — Deploy to Vercel on merge
+
+---
+
+## 🤝 Contributing
+
+1. Fork repository
+2. Buat branch: `git checkout -b feature/nama-fitur`
+3. Commit changes: `git commit -m "feat: tambah fitur X"`
+4. Push: `git push origin feature/nama-fitur`
+5. Buat Pull Request
+
+### Commit Convention
+Mengikuti [Conventional Commits](https://www.conventionalcommits.org/):
+- `feat:` — Fitur baru
+- `fix:` — Bug fix
+- `docs:` — Dokumentasi
+- `refactor:` — Refactor code
+- `test:` — Test
+- `chore:` — Maintenance
+
+---
+
+## 📄 License
+
+**MIT License** — lihat file [LICENSE](LICENSE) untuk detail.
+
+---
+
+## 🙏 Acknowledgments
+
+- **Anthropic** — Claude models untuk creative generation & validation
+- **OpenAI** — GPT-4o untuk planning & image prompts
+- **Cohere** — Multilingual embeddings untuk bahasa Indonesia
+- **Vercel** — Hosting, Postgres, Blob storage
+- **shadcn/ui** — Komponen UI accessible & customizable
+- **Turborepo** — Monorepo build system
+
+---
+
+## 📞 Kontak
+
+- **Repository**: https://github.com/adminberitakarya-Aji/sura-buya
+- **Issues**: GitHub Issues untuk bug reports & feature requests
+- **Discussions**: GitHub Discussions untuk pertanyaan & ide
+
+---
+
+> **Dibangun dengan ❤️ untuk anak-anak Indonesia** — *Suro & Buya hadir membawa petualangan Nusantara ke era AI.*

@@ -1,0 +1,54 @@
+{
+  "name": "@suro-buya/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared utilities, types, and constants for Suro-Buya",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./constants": {
+      "types": "./dist/constants/index.d.ts",
+      "import": "./dist/constants/index.js"
+    },
+    "./utils": {
+      "types": "./dist/utils/index.d.ts",
+      "import": "./dist/utils/index.js"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/types/index.js"
+    }
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -b && tsc --module CommonJS --outDir dist/cjs src/index.ts",
+    "build:esm": "tsc -b",
+    "build:cjs": "tsc --module CommonJS --outDir dist/cjs src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/index.ts src/constants/index.ts src/utils/index.ts src/types/index.ts --config eslint.config.cjs --no-ignore --no-warn-ignored",
+    "format": "prettier --write src",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist dist/cjs node_modules/.cache"
+  },
+  "dependencies": {
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0",
+    "tsx": "^4.6.0",
+    "vitest": "^1.0.0",
+    "eslint": "^8.55.0",
+    "prettier": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

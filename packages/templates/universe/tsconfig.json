@@ -1,0 +1,25 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "tsBuildInfoFile": "dist/tsbuildinfo",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "paths": {
+      "@suro-buya/shared": ["../../../packages/shared/src"],
+      "@suro-buya/config": ["../../../packages/config/src"]
+    }
+  },
+  "include": ["src/**/*", "tests/**/*"],
+  "exclude": ["node_modules", "dist", "dist/**/*"],
+  "references": [
+    { "path": "../../../packages/shared" },
+    { "path": "../../../packages/config" }
+  ]
+}

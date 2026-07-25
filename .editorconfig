@@ -1,0 +1,45 @@
+root = true
+
+[*]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.{ts,tsx,js,jsx,json,yaml,yml,md,mdx}]
+indent_style = space
+indent_size = 2
+
+[*.{html,vue,svelte,astro}]
+indent_style = space
+indent_size = 2
+
+[*.{css,scss,less}]
+indent_style = space
+indent_size = 2
+
+[*.{graphql,gql}]
+indent_style = space
+indent_size = 2
+
+[Makefile]
+indent_style = tab
+
+[*.{sh,bash,zsh}]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+
+[*.{py}]
+indent_style = space
+indent_size = 4
+
+[*.{toml}]
+indent_style = space
+indent_size = 2
+
+[*.{rs}]
+indent_style = space
+indent_size = 4

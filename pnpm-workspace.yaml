@@ -1,0 +1,9 @@
+packages:
+  - "packages/*"
+  - "apps/*"
+  - "packages/config"
+  - "packages/shared"
+  - "packages/engine-v2"
+  - "packages/templates/universe"
+  - "apps/cli"
+  - "apps/web"

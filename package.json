@@ -1,0 +1,52 @@
+{
+  "name": "suro-buya",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Suro-Buya Universe - Monorepo for IP Universe Development",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "pnpm --filter @suro-buya/cli dev",
+    "build": "pnpm -r build",
+    "build:engine": "pnpm --filter @suro-buya/engine-v2 build",
+    "build:shared": "pnpm --filter @suro-buya/shared build",
+    "build:templates": "pnpm --filter @suro-buya/templates build",
+    "build:cli": "pnpm --filter @suro-buya/cli build",
+    "build:web": "pnpm --filter @suro-buya/web build",
+    "generate": "pnpm --filter @suro-buya/engine-v2 generate",
+    "validate": "pnpm --filter @suro-buya/engine-v2 validate",
+    "test": "pnpm -r test",
+    "test:watch": "pnpm -r test:watch",
+    "lint": "pnpm -r lint",
+    "format": "pnpm -r format",
+    "typecheck": "pnpm -r typecheck",
+    "lint:fix": "pnpm -r lint:fix",
+    "clean": "pnpm -r clean && rm -rf node_modules/.cache",
+    "clean:all": "pnpm clean && rm -rf node_modules pnpm-lock.yaml",
+    "prepare": "husky install",
+    "postinstall": "husky install"
+  },
+  "devDependencies": {
+    "@suro-buya/config": "workspace:*",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.0.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "pnpm@8.14.0",
+  "dependencies": {
+    "@auth/prisma-adapter": "^2.11.3",
+    "@hookform/resolvers": "^5.4.2",
+    "@prisma/client": "^5.10.0",
+    "@tanstack/react-query": "^5.101.4",
+    "next-auth": "5.0.0-beta.32",
+    "react-hook-form": "^7.83.0",
+    "zod": "^3.22.4",
+    "zustand": "^5.0.14"
+  }
+}
