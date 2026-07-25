@@ -11,6 +11,7 @@
     "baseUrl": ".",
     "types": ["node"],
     "esModuleInterop": true,
+    "downlevelIteration": true,
     "paths": {
       "@suro-buya/shared": ["../shared/src"],
       "@suro-buya/config": ["../config/src"]

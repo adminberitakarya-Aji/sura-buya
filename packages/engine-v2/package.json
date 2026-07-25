@@ -25,9 +25,9 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -b && tsc --module CommonJS --outDir dist/cjs src/index.ts",
+    "build": "tsc -b && tsc -p tsconfig.json --module CommonJS --moduleResolution node --outDir dist/cjs",
     "build:esm": "tsc -b",
-    "build:cjs": "tsc --module CommonJS --outDir dist/cjs src/index.ts",
+    "build:cjs": "tsc -p tsconfig.json --module CommonJS --moduleResolution node --outDir dist/cjs",
     "generate": "tsx src/commands/generate-scene.ts",
     "validate": "tsx src/validate/canonCheck.ts",
     "test": "vitest run",

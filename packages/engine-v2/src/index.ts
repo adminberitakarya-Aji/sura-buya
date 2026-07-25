@@ -10,9 +10,53 @@ export * from './validate.js';
 export * from './generate.js';
 export * from './context.js';
 export * from './prompt/template.js';
-export * from './ai/registry.js';
+export * from './ai/providers.js';
+export * from './skills/base.js';
+export * from './skills/registry.js';
 
-// Re-export types explicitly re-export types to avoid conflicts
+// Explicitly re-export AI registry to avoid conflicts
+export {
+  ProviderRegistry,
+  type AITask,
+  type TaskProviderConfig,
+  type ProviderSpec,
+  type ProviderRegistryConfig,
+  type ProviderHealth,
+  type ProviderSelection,
+} from './ai/registry.js';
+
+export { AIProviderFactory, createProviderFactory } from './ai/providers.js';
+
+// Explicitly re-export prompting skills to avoid conflicts
+export { 
+  FewShotBuilder, 
+  createFewShotBuilder, 
+  fewShotBuilderRegistration,
+  type FewShotExample,
+  type FewShotBuilderConfig,
+  type FewShotBuilderInput,
+  type FewShotBuilderOutput
+} from './skills/prompting/few-shot-builder.js';
+
+export { 
+  PromptOptimizer, 
+  createPromptOptimizer, 
+  promptOptimizerRegistration,
+  type PromptOptimizerConfig,
+  type PromptOptimizerInput,
+  type PromptOptimizerOutput
+} from './skills/prompting/prompt-optimizer.js';
+
+export { 
+  ContextCompressor, 
+  createContextCompressor, 
+  contextCompressorRegistration,
+  type ContextCompressorConfig,
+  type ContextCompressorInput,
+  type ContextCompressorOutput
+} from './skills/prompting/context-compressor.js';
+
+// Re-export types explicitly to avoid conflicts
 export type { 
   EngineConfig,
   SceneGenerationInput,

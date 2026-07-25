@@ -321,6 +321,122 @@ export interface ContextLoaderOptions {
 }
 
 /**
+ * Screenplay format types
+ */
+export type ScreenplayFormat = 
+  | 'standard'
+  | 'shooting-script'
+  | 'spec-script'
+  | 'tv-script'
+  | 'multicam';
+
+/**
+ * Camera shot size types
+ */
+export type CameraShotSize = 
+  | 'extreme-wide'
+  | 'very-wide'
+  | 'wide'
+  | 'medium-wide'
+  | 'medium'
+  | 'medium-close'
+  | 'close-up'
+  | 'extreme-close-up'
+  | 'closeup'
+  | 'extreme-closeup';
+
+/**
+ * Camera angle types
+ */
+export type CameraAngle = 
+  | 'eye-level'
+  | 'low-angle'
+  | 'high-angle'
+  | 'dutch-angle'
+  | 'overhead'
+  | 'worm-eye'
+  | 'bird-eye'
+  | 'over-the-shoulder'
+  | 'point-of-view'
+  | 'low'
+  | 'high'
+  | 'pov'
+  | 'dutch';
+
+/**
+ * Camera movement types
+ */
+export type CameraMovement = 
+  | 'static'
+  | 'pan'
+  | 'tilt'
+  | 'dolly'
+  | 'truck'
+  | 'pedestal'
+  | 'crane'
+  | 'zoom'
+  | 'rack-focus'
+  | 'handheld'
+  | 'steadicam'
+  | 'tracking'
+  | 'aerial'
+  | 'push';
+
+/**
+ * Camera shot definition
+ */
+export interface CameraShot {
+  id: string;
+  sceneNumber: number;
+  beatIndex: number;
+  size: CameraShotSize;
+  angle: CameraAngle;
+  movement: CameraMovement;
+  duration: number; // seconds
+  composition: ShotComposition;
+  focus: string;
+  description: string;
+  equipment: string[];
+  startTime?: number;
+  endTime?: number;
+}
+
+/**
+ * Shot composition types
+ */
+export interface ShotComposition {
+  ruleOfThirds: string;
+  depth: string;
+  framing: string;
+}
+
+/**
+ * Visual style types
+ */
+export type VisualStyle = 
+  | 'cinematic'
+  | 'documentary'
+  | 'noir'
+  | 'vibrant'
+  | 'muted'
+  | 'high-contrast'
+  | 'low-key'
+  | 'high-key'
+  | 'naturalistic'
+  | 'stylized';
+
+/**
+ * Shot plan for storyboard
+ */
+export interface ShotPlan {
+  id: string;
+  sceneNumber: number;
+  shots: CameraShot[];
+  totalDuration: number;
+  setupNotes: string[];
+}
+
+/**
  * Loaded universe context
  */
 export interface UniverseContext {
