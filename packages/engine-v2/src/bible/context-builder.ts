@@ -162,7 +162,7 @@ export class ContextBuilder {
     const selectedSections = this.selectSectionsByBudget(sections, budget.bibleContext);
     
     for (const section of selectedSections) {
-      const file = await this.loader.load(section.id.split(':')[0] as BibleKey);
+      const file = await this.loader.load(section.id as BibleKey);
       if (file) {
         contextFiles.push(file);
         bibleTokensUsed += section.tokens;

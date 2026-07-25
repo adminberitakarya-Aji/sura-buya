@@ -1001,15 +1001,15 @@ PATCH  /api/universes/:id/ai-config/:task
 
 | Task | Description | Files | Done |
 |------|-------------|-------|------|
-| 1.13 | `SkillRegistry`: register, resolve dependencies, execute pipeline | `packages/engine-v2/src/skills/registry.ts` | [ ] |
-| 1.14 | Base skill classes: `GenerationSkill`, `ValidationSkill`, `PlanningSkill` | `packages/engine-v2/src/skills/base.ts` | [ ] |
-| 1.15 | Core Writing skills: `ScreenplayFormatter`, `DialogueWriter`, `ActionWriter`, `PacingController` | `packages/engine-v2/src/skills/writing/` | [ ] |
-| 1.16 | Core Character skills: `VoiceConsistency`, `ArcProgression`, `RelationshipMapper`, `TraitEnforcer` | `packages/engine-v2/src/skills/character/` | [ ] |
-| 1.17 | Core Environment skills: `LoreKeeper`, `GeographyChecker`, `CultureValidator`, `ContinuityGuard` | `packages/engine-v2/src/skills/environment/` | [ ] |
-| 1.18 | Core Property skills: `PropTracker`, `ItemContinuity`, `VisualReferenceMatcher` | `packages/engine-v2/src/skills/property/` | [ ] |
-| 1.19 | Core Camera skills: `ShotComposer`, `VisualLanguageEnforcer`, `StoryboardGenerator` | `packages/engine-v2/src/skills/camera/` | [ ] |
-| 1.20 | Core Audit/QC skills: `FormatChecker`, `CanonValidator`, `QualityScorer`, `ConsistencyAuditor` | `packages/engine-v2/src/skills/audit/` | [ ] |
-| 1.21 | Core Prompting skills: `FewShotBuilder`, `PromptOptimizer`, `ContextCompressor` | `packages/engine-v2/src/skills/prompting/` | [ ] |
+| 1.13 | `SkillRegistry`: register, resolve dependencies, execute pipeline | `packages/engine-v2/src/skills/registry.ts` | [x] |
+| 1.14 | Base skill classes: `GenerationSkill`, `ValidationSkill`, `PlanningSkill` | `packages/engine-v2/src/skills/base.ts` | [x] |
+| 1.15 | Core Writing skills: `ScreenplayFormatter`, `DialogueWriter`, `ActionWriter`, `PacingController` | `packages/engine-v2/src/skills/writing/` | [x] |
+| 1.16 | Core Character skills: `VoiceConsistency`, `ArcProgression`, `RelationshipMapper`, `TraitEnforcer` | `packages/engine-v2/src/skills/character/` | [x] |
+| 1.17 | Core Environment skills: `LoreKeeper`, `GeographyChecker`, `CultureValidator`, `ContinuityGuard` | `packages/engine-v2/src/skills/environment/` | [x] |
+| 1.18 | Core Property skills: `PropTracker`, `ItemContinuity`, `VisualReferenceMatcher` | `packages/engine-v2/src/skills/property/` | [x] |
+| 1.19 | Core Camera skills: `ShotComposer`, `VisualLanguageEnforcer`, `StoryboardGenerator` | `packages/engine-v2/src/skills/camera/` | [x] |
+| 1.20 | Core Audit/QC skills: `FormatChecker`, `CanonValidator`, `QualityScorer`, `ConsistencyAuditor` | `packages/engine-v2/src/skills/audit/` | [x] |
+| 1.21 | Core Prompting skills: `FewShotBuilder`, `PromptOptimizer`, `ContextCompressor` | `packages/engine-v2/src/skills/prompting/` | [x] |
 | 1.22 | Skill configuration per universe via `universe.yaml` | `packages/engine-v2/src/skills/config.ts` | [ ] |
 | 1.23 | Skill testing framework + unit tests | `packages/engine-v2/tests/skills/*.test.ts` | [ ] |
 
@@ -1017,7 +1017,6 @@ PATCH  /api/universes/:id/ai-config/:task
 
 **Notes:** This phase refactors `GenerationOrchestrator` (1.7) and `CanonValidator` (1.8) into skill-based architecture. `ProviderRegistry` (1.6) and `PromptTemplate` (1.4) are prerequisites.
 
----
 
 ### Phase 2: CLI & Universe Scaffolding (Minggu 4-5)
 

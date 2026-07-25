@@ -44,21 +44,29 @@ export class BibleLoader {
   private config: BibleLoaderConfig;
   private cache: Map<string, BibleFile> = new Map();
   private universeId: string;
+  private hasCustomWhitelist: boolean = false;
 
   constructor(universeId: string, config: Partial<BibleLoaderConfig> = {}) {
     this.universeId = universeId;
+    const hasCustomWhitelist = config.whitelist !== undefined;
     this.config = {
       universeRoot: config.universeRoot || join(process.cwd(), 'universes'),
       whitelist: config.whitelist || DEFAULT_BIBLE_KEYS,
       cacheEnabled: config.cacheEnabled ?? true,
       maxFileSize: config.maxFileSize ?? 1024 * 1024, // 1MB default
     };
+    this.hasCustomWhitelist = hasCustomWhitelist;
   }
 
   /**
    * Load a specific bible file by key
    */
   async load(key: BibleKey): Promise<BibleFile | null> {
+    // Check whitelist first
+    if (!this.isWhitelisted(key)) {
+      return null;
+    }
+    
     const cacheKey = `${this.universeId}:${key}`;
     
     // Check cache
@@ -247,7 +255,7 @@ export class BibleLoader {
    */
   private keyFromFilePath(filePath: string): BibleKey {
     const universeDir = this.getUniverseDir();
-    const relPath = relative(universeDir, filePath);
+    const relPath = relative(universeDir, filePath).replace(/\\/g, '/');
     
     // Map standard paths to keys
     if (relPath === 'bible/01-character-bible/overview.md') return 'characterOverview';
@@ -284,19 +292,23 @@ export class BibleLoader {
    * Check if key is whitelisted
    */
   private isWhitelisted(key: BibleKey): boolean {
-    // Standard keys are always whitelisted
-    if (DEFAULT_BIBLE_KEYS.includes(key as any)) return true;
-    
-    // Check custom whitelist
-    return this.config.whitelist.some(w => {
-      if (w === key) return true;
-      // Support wildcards
-      if (w.endsWith(':*')) {
-        const prefix = w.slice(0, -2);
-        return key.startsWith(prefix + ':');
-      }
-      return false;
-    });
+    if (this.hasCustomWhitelist) {
+      // Custom whitelist provided - check against it
+      return this.config.whitelist.some(w => {
+        if (w === key) return true;
+        // Support wildcards
+        if (w.endsWith(':*')) {
+          const prefix = w.slice(0, -2);
+          return key.startsWith(prefix + ':');
+        }
+        return false;
+      });
+    } else {
+      // Default whitelist - allow standard keys
+      if (DEFAULT_BIBLE_KEYS.includes(key as any)) return true;
+      // Also allow dynamic keys (character:, region:, custom:)
+      return key.startsWith('character:') || key.startsWith('region:') || key.startsWith('custom:');
+    }
   }
 
   /**

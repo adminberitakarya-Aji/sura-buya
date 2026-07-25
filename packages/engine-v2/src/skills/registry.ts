@@ -32,6 +32,24 @@ import { FewShotBuilder, createFewShotBuilder, fewShotBuilderRegistration } from
 import { PromptOptimizer, createPromptOptimizer, promptOptimizerRegistration } from './prompting/prompt-optimizer.js';
 import { ContextCompressor, createContextCompressor } from './prompting/context-compressor.js';
 
+// Import Phase 1.5 character skills
+import { ArcProgression, createArcProgression } from './character/arc-progression.js';
+import { RelationshipMapper, createRelationshipMapper } from './character/relationship-mapper.js';
+import { TraitEnforcer, createTraitEnforcer } from './character/trait-enforcer.js';
+import { VoiceConsistency, createVoiceConsistency } from './character/voice-consistency.js';
+
+// Import Phase 1.5 environment skills
+import { ContinuityGuard, createContinuityGuard } from './environment/continuity-guard.js';
+import { CultureValidator, createCultureValidator } from './environment/culture-validator.js';
+import { GeographyChecker, createGeographyChecker } from './environment/geography-checker.js';
+import { LoreKeeper, createLoreKeeper } from './environment/lore-keeper.js';
+
+// Import Phase 1.5 writing skills
+import { ActionWriter, createActionWriter } from './writing/action-writer.js';
+import { DialogueWriter, createDialogueWriter } from './writing/dialogue-writer.js';
+import { PacingController, createPacingController } from './writing/pacing-controller.js';
+import { ScreenplayFormatter, createScreenplayFormatter } from './writing/screenplay-formatter.js';
+
 /**
  * Creates default skill registrations for Phase 1.5: Skill System
  */
@@ -193,6 +211,168 @@ export function createDefaultSkillRegistrations(): SkillRegistration[] {
         defaultConfig: ContextCompressor.prototype.defaultConfig,
       },
       factory: createContextCompressor,
+    },
+
+    // Character Skills (Phase 1.5)
+    {
+      metadata: {
+        name: 'ArcProgression',
+        version: '1.0.0',
+        description: 'Tracks and enforces character arc progression across scenes and episodes',
+        category: 'character',
+        dependencies: ['VoiceConsistency'],
+        required: false,
+        configSchema: ArcProgression.prototype.configSchema,
+        defaultConfig: ArcProgression.prototype.defaultConfig,
+      },
+      factory: createArcProgression,
+    },
+    {
+      metadata: {
+        name: 'RelationshipMapper',
+        version: '1.0.0',
+        description: 'Maps and tracks character relationships across scenes and episodes',
+        category: 'character',
+        dependencies: ['ArcProgression', 'VoiceConsistency'],
+        required: false,
+        configSchema: RelationshipMapper.prototype.configSchema,
+        defaultConfig: RelationshipMapper.prototype.defaultConfig,
+      },
+      factory: createRelationshipMapper,
+    },
+    {
+      metadata: {
+        name: 'TraitEnforcer',
+        version: '1.0.0',
+        description: 'Enforces character trait consistency in dialogue and actions',
+        category: 'character',
+        dependencies: ['VoiceConsistency'],
+        required: false,
+        configSchema: TraitEnforcer.prototype.configSchema,
+        defaultConfig: TraitEnforcer.prototype.defaultConfig,
+      },
+      factory: createTraitEnforcer,
+    },
+    {
+      metadata: {
+        name: 'VoiceConsistency',
+        version: '1.0.0',
+        description: 'Ensures character voice and speech patterns remain consistent',
+        category: 'character',
+        dependencies: [],
+        required: false,
+        configSchema: VoiceConsistency.prototype.configSchema,
+        defaultConfig: VoiceConsistency.prototype.defaultConfig,
+      },
+      factory: createVoiceConsistency,
+    },
+
+    // Environment Skills (Phase 1.5)
+    {
+      metadata: {
+        name: 'ContinuityGuard',
+        version: '1.0.0',
+        description: 'Ensures scene-to-scene continuity across episodes',
+        category: 'environment',
+        dependencies: ['LoreKeeper', 'GeographyChecker', 'CultureValidator'],
+        required: false,
+        configSchema: ContinuityGuard.prototype.configSchema,
+        defaultConfig: ContinuityGuard.prototype.defaultConfig,
+      },
+      factory: createContinuityGuard,
+    },
+    {
+      metadata: {
+        name: 'CultureValidator',
+        version: '1.0.0',
+        description: 'Validates cultural consistency and authenticity in world-building',
+        category: 'environment',
+        dependencies: ['LoreKeeper'],
+        required: false,
+        configSchema: CultureValidator.prototype.configSchema,
+        defaultConfig: CultureValidator.prototype.defaultConfig,
+      },
+      factory: createCultureValidator,
+    },
+    {
+      metadata: {
+        name: 'GeographyChecker',
+        version: '1.0.0',
+        description: 'Checks geographical consistency and travel logic across scenes',
+        category: 'environment',
+        dependencies: ['LoreKeeper'],
+        required: false,
+        configSchema: GeographyChecker.prototype.configSchema,
+        defaultConfig: GeographyChecker.prototype.defaultConfig,
+      },
+      factory: createGeographyChecker,
+    },
+    {
+      metadata: {
+        name: 'LoreKeeper',
+        version: '1.0.0',
+        description: 'Maintains and validates world lore consistency',
+        category: 'environment',
+        dependencies: [],
+        required: false,
+        configSchema: LoreKeeper.prototype.configSchema,
+        defaultConfig: LoreKeeper.prototype.defaultConfig,
+      },
+      factory: createLoreKeeper,
+    },
+
+    // Writing Skills (Phase 1.5)
+    {
+      metadata: {
+        name: 'ScreenplayFormatter',
+        version: '1.0.0',
+        description: 'Formats generated scene content into standard screenplay format',
+        category: 'writing',
+        dependencies: [],
+        required: true,
+        configSchema: ScreenplayFormatter.prototype.configSchema,
+        defaultConfig: ScreenplayFormatter.prototype.defaultConfig,
+      },
+      factory: createScreenplayFormatter,
+    },
+    {
+      metadata: {
+        name: 'DialogueWriter',
+        version: '1.0.0',
+        description: 'Generates character dialogue with consistent voices',
+        category: 'writing',
+        dependencies: ['VoiceConsistency', 'ScreenplayFormatter'],
+        required: false,
+        configSchema: DialogueWriter.prototype.configSchema,
+        defaultConfig: DialogueWriter.prototype.defaultConfig,
+      },
+      factory: createDialogueWriter,
+    },
+    {
+      metadata: {
+        name: 'ActionWriter',
+        version: '1.0.0',
+        description: 'Writes action sequences with proper pacing and cinematography',
+        category: 'writing',
+        dependencies: ['ScreenplayFormatter', 'ShotComposer'],
+        required: false,
+        configSchema: ActionWriter.prototype.configSchema,
+        defaultConfig: ActionWriter.prototype.defaultConfig,
+      },
+      factory: createActionWriter,
+    },
+    {
+      metadata: {
+        name: 'PacingController',
+        version: '1.0.0',
+        description: 'Controls narrative pacing and scene rhythm',
+        category: 'writing',
+        dependencies: ['ScreenplayFormatter'],
+        required: false,
+        configSchema: PacingController.prototype.configSchema,
+        defaultConfig: PacingController.prototype.defaultConfig,
+      },
+      factory: createPacingController,
     },
   ];
 }
