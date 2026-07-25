@@ -12,42 +12,20 @@ import type {
   EpisodeStructure,
   CharacterProfile,
   WorldProfile,
-  StoryProfile 
+  StoryProfile,
+  ValidationRule,
+  ValidationContext,
+  ValidationViolation
 } from './types.js';
 import { SCHEMAS } from '@suro-buya/shared';
 
-/**
- * Canon validation rules
- */
-export interface ValidationRule {
-  id: string;
-  name: string;
-  description: string;
-  severity: 'error' | 'warning' | 'info';
-  check: (context: ValidationContext) => ValidationViolation[];
-}
-
-export interface ValidationContext {
-  content: string;
-  contentType: 'scene' | 'episode' | 'story' | 'character' | 'world';
-  universeConfig: GenerationContext['universeConfig'];
-  characterBibles: GenerationContext['characterBibles'];
-  worldBibles: GenerationContext['worldBibles'];
-  storyProfile: GenerationContext['storyProfile'];
-  episodeStructure?: GenerationContext['episodeStructure'];
-  sceneData?: SceneData;
-  characterProfile?: CharacterProfile;
-  worldProfile?: WorldProfile;
-}
-
-export interface ValidationViolation {
-  rule: string;
-  severity: 'error' | 'warning' | 'info';
-  location: string;
-  expected: unknown;
-  actual: unknown;
-  suggestion?: string;
-}
+// Re-export validation types
+export type { 
+  CanonValidationResult,
+  ValidationRule,
+  ValidationContext,
+  ValidationViolation,
+} from './types.js';
 
 /**
  * Built-in validation rules

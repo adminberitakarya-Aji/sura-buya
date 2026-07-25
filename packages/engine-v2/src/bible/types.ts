@@ -150,7 +150,7 @@ export interface ContextResult {
 }
 
 /**
- * Token budget allocation for different context sections
+ * Default token budgets by task
  */
 export interface TokenBudget {
   /** Total budget */

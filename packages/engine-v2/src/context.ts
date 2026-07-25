@@ -11,42 +11,11 @@ import type {
   WorldProfile, 
   StoryProfile, 
   EpisodeStructure,
-  SceneData 
+  SceneData,
+  ContextLoaderOptions,
+  UniverseContext
 } from './types.js';
 import { readJsonFile, readYamlFile, listFiles, ensureDir } from '@suro-buya/shared';
-
-/**
- * Context loader options
- */
-export interface ContextLoaderOptions {
-  /** Universe directory path */
-  universeDir: string;
-  /** Enable caching */
-  cache?: boolean;
-}
-
-/**
- * Loaded universe context
- */
-export interface UniverseContext {
-  /** Universe configuration */
-  config: UniverseConfig;
-  
-  /** Character bibles */
-  characters: Record<string, CharacterProfile>;
-  
-  /** World bibles */
-  worlds: Record<string, WorldProfile>;
-  
-  /** Story profile */
-  story: StoryProfile;
-  
-  /** Episodes */
-  episodes: Record<string, EpisodeStructure>;
-  
-  /** Scenes */
-  scenes: Record<string, SceneData>;
-}
 
 /**
  * Load universe context from directory

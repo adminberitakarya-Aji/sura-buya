@@ -5,14 +5,18 @@
  * Provides scene generation, validation, and universe management capabilities.
  */
 
+// Core modules
 export * from './commands.js';
 export * from './validate.js';
 export * from './generate.js';
 export * from './context.js';
 export * from './prompt/template.js';
+export * from './bible/types.js';
 export * from './ai/providers.js';
 export * from './skills/base.js';
 export * from './skills/registry.js';
+export * from './plan/episode-planner.js';
+export * from './plan/season-planner.js';
 
 // Explicitly re-export AI registry to avoid conflicts
 export {
@@ -56,24 +60,8 @@ export {
   type ContextCompressorOutput
 } from './skills/prompting/context-compressor.js';
 
-// Re-export types explicitly to avoid conflicts
-export type { 
-  EngineConfig,
-  SceneGenerationInput,
-  EpisodeGenerationInput,
-  CanonValidationResult,
-  GenerationContext,
-  EngineStatus,
-  CommandResult,
-  ValidationRule,
-  ValidationContext,
-  ValidationViolation,
-  GenerationOptions,
-  GeneratedScene,
-  GeneratedEpisode,
-  ContextLoaderOptions,
-  UniverseContext,
-} from './types.js';
+// Re-export all types from types.ts (which includes shared types and engine-specific types)
+export * from './types.js';
 
 /**
  * Engine version

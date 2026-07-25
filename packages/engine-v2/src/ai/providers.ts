@@ -4,7 +4,7 @@
  * Unified interface for multiple LLM providers (OpenAI, Anthropic, Ollama).
  */
 
-import type { GenerationOptions } from '../generate.js';
+import type { GenerationOptions } from '../types.js';
 
 /**
  * AI Provider interface

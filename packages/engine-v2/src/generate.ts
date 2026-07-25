@@ -10,47 +10,11 @@ import type {
   GenerationContext,
   SceneData,
   EpisodeStructure,
-  EngineConfig 
+  EngineConfig,
+  GenerationOptions,
+  GeneratedScene,
+  GeneratedEpisode
 } from './types.js';
-
-/**
- * Generation options
- */
-export interface GenerationOptions {
-  model?: string;
-  temperature?: number;
-  maxTokens?: number;
-  stream?: boolean;
-  seed?: number;
-}
-
-/**
- * Generated scene output
- */
-export interface GeneratedScene {
-  scene: SceneData;
-  content: string;
-  metadata: {
-    model: string;
-    tokensUsed: number;
-    duration: number;
-    timestamp: string;
-  };
-}
-
-/**
- * Generated episode output
- */
-export interface GeneratedEpisode {
-  episode: EpisodeStructure;
-  scenes: GeneratedScene[];
-  metadata: {
-    model: string;
-    totalTokens: number;
-    duration: number;
-    timestamp: string;
-  };
-}
 
 /**
  * Generate a scene using LLM

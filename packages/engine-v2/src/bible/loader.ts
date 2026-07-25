@@ -8,8 +8,8 @@
 import { readFileSync, existsSync, readdirSync, statSync } from 'fs';
 import { join, extname, relative } from 'path';
 import type { UniverseConfig, CharacterProfile, WorldProfile, StoryProfile, EpisodeStructure, SceneData } from '../types.js';
-import { BibleFile, BibleIndex, BibleKey } from './types.js';
-import type { BibleFileMeta } from './types.js';
+import type { BibleFile, BibleIndex, BibleKey, BibleFileMeta } from './types.js';
+export type { BibleFile, BibleIndex, BibleKey } from './types.js';
 
 /**
  * Bible loader configuration

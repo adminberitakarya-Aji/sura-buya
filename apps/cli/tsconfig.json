@@ -4,8 +4,20 @@
     "outDir": "dist",
     "rootDir": "src",
     "composite": true,
-    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo"
+    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo",
+    "baseUrl": ".",
+    "paths": {
+      "@suro-buya/cli": ["../../packages/cli/src"],
+      "@suro-buya/cli/commands/create-universe.js": ["../../packages/cli/src/commands/create-universe.ts"],
+      "@suro-buya/cli/commands/generate-scene.js": ["../../packages/cli/src/commands/generate-scene.ts"],
+      "@suro-buya/cli/commands/generate-episode.js": ["../../packages/cli/src/commands/generate-episode.ts"],
+      "@suro-buya/cli/commands/generate-season.js": ["../../packages/cli/src/commands/generate-season.ts"],
+      "@suro-buya/cli/commands/validate-universe.js": ["../../packages/cli/src/commands/validate-universe.ts"]
+    }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "dist/cjs"]
+  "exclude": ["node_modules", "dist", "dist/cjs"],
+  "references": [
+    { "path": "../../packages/cli" }
+  ]
 }

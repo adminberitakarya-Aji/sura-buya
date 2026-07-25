@@ -12,15 +12,70 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./commands": {
-      "types": "./dist/commands/index.d.ts",
-      "import": "./dist/commands/index.js",
-      "require": "./dist/cjs/commands/index.js"
+    "./commands.js": {
+      "types": "./dist/commands.d.ts",
+      "import": "./dist/commands.js",
+      "require": "./dist/cjs/commands.js"
     },
-    "./validate": {
-      "types": "./dist/validate/index.d.ts",
-      "import": "./dist/validate/index.js",
-      "require": "./dist/cjs/validate/index.js"
+    "./validate.js": {
+      "types": "./dist/validate.d.ts",
+      "import": "./dist/validate.js",
+      "require": "./dist/cjs/validate.js"
+    },
+    "./validate/canon.js": {
+      "types": "./dist/validate/canon.d.ts",
+      "import": "./dist/validate/canon.js",
+      "require": "./dist/cjs/validate/canon.js"
+    },
+    "./plan/episode-planner.js": {
+      "types": "./dist/plan/episode-planner.d.ts",
+      "import": "./dist/plan/episode-planner.js",
+      "require": "./dist/cjs/plan/episode-planner.js"
+    },
+    "./plan/season-planner.js": {
+      "types": "./dist/plan/season-planner.d.ts",
+      "import": "./dist/plan/season-planner.js",
+      "require": "./dist/cjs/plan/season-planner.js"
+    },
+    "./generate/orchestrator.js": {
+      "types": "./dist/generate/orchestrator.d.ts",
+      "import": "./dist/generate/orchestrator.js",
+      "require": "./dist/cjs/generate/orchestrator.js"
+    },
+    "./bible/loader.js": {
+      "types": "./dist/bible/loader.d.ts",
+      "import": "./dist/bible/loader.js",
+      "require": "./dist/cjs/bible/loader.js"
+    },
+    "./bible/context-builder.js": {
+      "types": "./dist/bible/context-builder.d.ts",
+      "import": "./dist/bible/context-builder.js",
+      "require": "./dist/cjs/bible/context-builder.js"
+    },
+    "./bible/indexer.js": {
+      "types": "./dist/bible/indexer.d.ts",
+      "import": "./dist/bible/indexer.js",
+      "require": "./dist/cjs/bible/indexer.js"
+    },
+    "./bible/types.js": {
+      "types": "./dist/bible/types.d.ts",
+      "import": "./dist/bible/types.js",
+      "require": "./dist/cjs/bible/types.js"
+    },
+    "./types.js": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js",
+      "require": "./dist/cjs/types.js"
+    },
+    "./prompt/template.js": {
+      "types": "./dist/prompt/template.d.ts",
+      "import": "./dist/prompt/template.js",
+      "require": "./dist/cjs/prompt/template.js"
+    },
+    "./ai/registry.js": {
+      "types": "./dist/ai/registry.d.ts",
+      "import": "./dist/ai/registry.js",
+      "require": "./dist/cjs/ai/registry.js"
     }
   },
   "scripts": {

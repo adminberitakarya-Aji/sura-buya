@@ -1022,13 +1022,13 @@ PATCH  /api/universes/:id/ai-config/:task
 
 | Task | Description | Files | Done |
 |------|-------------|-------|------|
-| 2.1 | `create-universe` command: interactive wizard (5 steps) | `packages/cli/src/commands/create-universe.ts` | [ ] |
-| 2.2 | Template copy: scaffold bible folder from `packages/templates` | `packages/cli/src/utils/scaffold.ts` | [ ] |
-| 2.3 | `universe.yaml` generation from wizard answers | `packages/cli/src/utils/manifest.ts` | [ ] |
-| 2.4 | `generate-scene` command: refactor existing, use engine core | `packages/cli/src/commands/generate-scene.ts` | [ ] |
-| 2.5 | `generate-episode` command: plan + generate all scenes | `packages/cli/src/commands/generate-episode.ts` | [ ] |
-| 2.6 | `generate-season` command: season arc + episode breakdown | `packages/cli/src/commands/generate-season.ts` | [ ] |
-| 2.7 | `validate-universe` command: full canon check | `packages/cli/src/commands/validate-universe.ts` | [ ] |
+| 2.1 | `create-universe` command: interactive wizard (5 steps) | `packages/cli/src/commands/create-universe.ts` | [x] |
+| 2.2 | Template copy: scaffold bible folder from `packages/templates` | `packages/cli/src/utils/scaffold.ts` | [x] |
+| 2.3 | `universe.yaml` generation from wizard answers | `packages/cli/src/utils/manifest.ts` | [x] |
+| 2.4 | `generate-scene` command: refactor existing, use engine core | `packages/cli/src/commands/generate-scene.ts` | [x] |
+| 2.5 | `generate-episode` command: plan + generate all scenes | `packages/cli/src/commands/generate-episode.ts` | [x] |
+| 2.6 | `generate-season` command: season arc + episode breakdown | `packages/cli/src/commands/generate-season.ts` | [x] |
+| 2.7 | `validate-universe` command: full canon check | `packages/cli/src/commands/validate-universe.ts` | [x] |
 | 2.8 | Test: `pnpm cli create-universe test-ip` → generate scene | Manual test | [ ] |
 
 **Deliverable:** New universe created & scene generated in <5 minutes via CLI.
