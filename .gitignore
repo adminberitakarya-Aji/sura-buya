@@ -46,12 +46,6 @@ coverage
 coverage/**/*
 .nyc_output
 
-# Test
-*.test.ts
-*.test.js
-*.spec.ts
-*.spec.js
-
 # Temporary files
 tmp
 temp
