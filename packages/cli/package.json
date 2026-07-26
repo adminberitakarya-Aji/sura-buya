@@ -1,8 +1,8 @@
 {
-  "name": "@suro-buya/cli",
+  "name": "@suro-buya/cli-commands",
   "version": "0.1.0",
   "private": true,
-  "description": "Suro-Buya CLI - Universe creation and generation tools",
+  "description": "Suro-Buya CLI Commands - Universe creation and generation tools",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -44,7 +44,7 @@
     "build:esm": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint src --config eslint.config.cjs --no-ignore --no-warn-ignored",
+    "lint": "eslint src/index.ts src/commands/create-universe.ts src/commands/generate-episode.ts src/commands/generate-scene.ts src/commands/generate-season.ts src/commands/validate-universe.ts src/utils/manifest.ts src/utils/scaffold.ts --config ../../eslint.config.cjs --no-ignore --no-warn-ignored",
     "format": "prettier --write src",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist dist/cjs node_modules/.cache"

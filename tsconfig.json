@@ -32,6 +32,7 @@
     { "path": "packages/config" },
     { "path": "packages/engine-v2" },
     { "path": "packages/templates/universe" },
+    { "path": "packages/cli" },
     { "path": "apps/cli" },
     { "path": "apps/web" }
   ]

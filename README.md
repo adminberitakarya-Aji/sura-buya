@@ -14,8 +14,8 @@
 **Suro-Buya Universe** adalah platform AI Factory untuk menciptakan, mengelola, dan memproduksi *IP Universe* anak-anak Indonesia secara end-to-end. Mulai dari pembuatan *universe bible* (character, world, story, visual, production), perencanaan season/episode, generasi scene via AI, validasi kanonisasi, hingga review & approve — semua dalam satu platform terintegrasi.
 
 ### Universe Referensi: **Suro & Buya**
-- **Suro** — Anak laki-laki 10 th, penasaran, berani, suka petualangan
-- **Buya** — Anak perempuan 10 th, cerdas, tenang, pemecah masalah
+- **Suro** — Hiu muda, laki-laki, 10 th, asal Surabaya, penasaran, berani, suka petualangan (*The Explorer Leader*)
+- **Buya** — Buaya muda, laki-laki, 9 th, asal Surabaya, rasa ingin tahu besar, suka memahami sebelum bertindak (*The Curious Explorer*)
 - **Setting**: Nusantara modern-fantasy, budaya Jawa-Timur kaya makna
 - **Target**: Anak 7–12 tahun, keluarga Indonesia
 
@@ -32,12 +32,15 @@ suro-buya/
 │   │   ├── src/components/     # Page-specific components
 │   │   └── prisma/             # Database schema
 │   │
-│   └── cli/                    # CLI Tools (create-universe, generate, validate)
-│       └── src/commands/
+│   └── cli/                    # CLI Executable Application (@suro-buya/cli)
+│       └── src/
 │
 ├── packages/
 │   ├── shared/                 # Shared types, Zod schemas, constants, utils
 │   │   └── src/types/, schemas/, constants/, utils/
+│   │
+│   ├── cli/                    # CLI Commands Library (@suro-buya/cli-commands)
+│   │   └── src/commands/, utils/
 │   │
 │   ├── engine-v2/              # AI Factory Core (universe-agnostic)
 │   │   ├── src/
@@ -80,23 +83,23 @@ suro-buya/
 
 ## 🚀 Quick Start
 
-### Prasyarat
-- **Node.js** ≥ 20.0.0
-- **pnpm** ≥ 8.14.0 (`corepack enable pnpm`)
-- **PostgreSQL** (local atau Neon/Vercel Postgres)
-- **API Keys**: Anthropic, OpenAI, Cohere (lihat `.env.example`)
+### Prerequisites
+- Node.js >= 20.0.0
+- pnpm >= 8.0.0
+- PostgreSQL (atau Supabase)
 
 ### Instalasi
 
 ```bash
-# Clone & install dependencies
+# Clone repository
 git clone https://github.com/adminberitakarya-Aji/sura-buya.git
-cd suro-buya
+cd sura-buya
+
+# Install dependencies
 pnpm install
 
-# Setup environment
+# Setup environment variables
 cp .env.example .env
-# Edit .env dengan credentials Anda
 
 # Setup database
 pnpm --filter @suro-buya/web db:generate
@@ -144,10 +147,11 @@ pnpm --filter @suro-buya/cli validate:universe
 |---------|-----------|-------------|
 | `@suro-buya/shared` | Shared types, Zod schemas, constants, utilities | `packages/shared/src/index.ts` |
 | `@suro-buya/engine-v2` | AI Factory core: bible, context, prompt, generate, validate, plan, ai | `packages/engine-v2/src/index.ts` |
+| `@suro-buya/cli-commands` | CLI commands & utilities library | `packages/cli/src/index.ts` |
 | `@suro-buya/templates` | Universe starter templates (creator/engine/prompt modules) | `packages/templates/universe/` |
 | `@suro-buya/config` | Shared ESLint, TypeScript, Prettier configs | `packages/config/` |
 | `@suro-buya/web` | Next.js 14 Dashboard + API (Creator Portal) | `apps/web/` |
-| `@suro-buya/cli` | CLI tools untuk universe management | `apps/cli/src/index.ts` |
+| `@suro-buya/cli` | Executable CLI tools untuk universe management | `apps/cli/src/index.ts` |
 
 ---
 

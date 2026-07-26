@@ -11,9 +11,9 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -b && tsc --module CommonJS --outDir dist/cjs src/index.ts",
+    "build": "tsc -b && tsc -p tsconfig.json --module CommonJS --moduleResolution node --outDir dist/cjs",
     "build:esm": "tsc -b",
-    "build:cjs": "tsc --module CommonJS --outDir dist/cjs src/index.ts",
+    "build:cjs": "tsc -p tsconfig.json --module CommonJS --moduleResolution node --outDir dist/cjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src/index.ts --config ../../eslint.config.cjs --no-ignore --no-warn-ignored",
@@ -22,7 +22,7 @@
     "clean": "rm -rf dist dist/cjs node_modules/.cache"
   },
   "dependencies": {
-    "@suro-buya/cli": "workspace:*",
+    "@suro-buya/cli-commands": "workspace:*",
     "@suro-buya/engine-v2": "workspace:*",
     "@suro-buya/shared": "workspace:*",
     "chalk": "^5.3.0",

@@ -8,11 +8,13 @@
 
 import { program } from 'commander';
 import chalk from 'chalk';
-import { createUniverseCommand } from '@suro-buya/cli/commands/create-universe.js';
-import { generateSceneCommand } from '@suro-buya/cli/commands/generate-scene.js';
-import { generateEpisodeCommand } from '@suro-buya/cli/commands/generate-episode.js';
-import { generateSeasonCommand } from '@suro-buya/cli/commands/generate-season.js';
-import { validateUniverseCommand } from '@suro-buya/cli/commands/validate-universe.js';
+import {
+  createUniverseCommand,
+  generateSceneCommand,
+  generateEpisodeCommand,
+  generateSeasonCommand,
+  validateUniverseCommand,
+} from '@suro-buya/cli-commands';
 import { CommandRegistry, BUILTIN_COMMANDS, createDefaultContext } from '@suro-buya/engine-v2';
 
 const registry = new CommandRegistry();
