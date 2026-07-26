@@ -83,6 +83,7 @@ model Universe {
   owner            User            @relation("UniverseOwner", fields: [ownerId], references: [id])
   members          UniverseMember[]
   characters       Character[]
+  bibleFiles       BibleFile[]
   episodes         Episode[]
   canonRules       CanonRule[]
   aiConfigs        AIConfig[]
@@ -240,6 +241,33 @@ enum SceneStatus {
   VALIDATED
   APPROVED
   REJECTED
+}
+
+model BibleFile {
+  id          String        @id @default(cuid())
+  universeId  String
+  category    BibleCategory
+  path        String        // relative path within category, e.g. "voice-protagonist.md"
+  title       String
+  content     String        @db.Text // raw markdown body (frontmatter excluded)
+  frontmatter Json?         // parsed YAML frontmatter
+  version     Int           @default(1)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  createdById String?
+  updatedById String?
+
+  universe Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
+
+  @@unique([universeId, category, path])
+}
+
+enum BibleCategory {
+  CHARACTER
+  WORLD
+  STORY
+  VISUAL
+  PRODUCTION
 }
 
 model CanonRule {

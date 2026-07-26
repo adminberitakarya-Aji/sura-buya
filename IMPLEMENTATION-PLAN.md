@@ -1047,8 +1047,8 @@ PATCH  /api/universes/:id/ai-config/:task
 | 3.5 | Character manager: CRUD + voice guide editor | `apps/web/src/app/(dashboard)/[universeId]/characters/` | [ ] |
 | 3.6 | Region/World manager | `apps/web/src/app/(dashboard)/[universeId]/world/` | [ ] |
 | 3.7 | Settings: AI provider config per task, encrypted API keys | `apps/web/src/app/(dashboard)/[universeId]/settings/ai-providers/` | [ ] |
-| 3.8 | API routes: CRUD for universes, characters, bible files | `apps/web/src/app/api/` | [ ] |
-| 3.9 | Role-based access control (Owner/Editor/Reviewer/Viewer) | `apps/web/src/lib/rbac.ts` | [ ] |
+| 3.8 | API routes: CRUD for universes, characters, bible files | `apps/web/src/app/api/` | [x] |
+| 3.9 | Role-based access control (Owner/Editor/Reviewer/Viewer) | `apps/web/src/lib/rbac.ts` | [x] |
 
 **Deliverable:** Creator can manage universe bible entirely via web UI.
 
