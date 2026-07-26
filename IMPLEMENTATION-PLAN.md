@@ -1044,8 +1044,8 @@ PATCH  /api/universes/:id/ai-config/:task
 | 3.2 | Prisma schema + migrations + seed script | `apps/web/prisma/` | [x] |
 | 3.3 | Universe list page + create wizard (5 steps) | `apps/web/src/app/(dashboard)/[universeId]/` | [x] |
 | 3.4 | Bible file editor: Markdown + frontmatter, live preview | `packages/ui/src/components/editors/BibleEditor.tsx` | [ ] |
-| 3.5 | Character manager: CRUD + voice guide editor | `apps/web/src/app/(dashboard)/[universeId]/characters/` | [ ] |
-| 3.6 | Region/World manager | `apps/web/src/app/(dashboard)/[universeId]/world/` | [ ] |
+| 3.5 | Character manager: CRUD + voice guide editor | `apps/web/src/app/(dashboard)/[universeId]/characters/` | [x] |
+| 3.6 | Region/World manager | `apps/web/src/app/(dashboard)/[universeId]/world/` | [x] |
 | 3.7 | Settings: AI provider config per task, encrypted API keys | `apps/web/src/app/(dashboard)/[universeId]/settings/ai-providers/` | [ ] |
 | 3.8 | API routes: CRUD for universes, characters, bible files | `apps/web/src/app/api/` | [x] |
 | 3.9 | Role-based access control (Owner/Editor/Reviewer/Viewer) | `apps/web/src/lib/rbac.ts` | [x] |

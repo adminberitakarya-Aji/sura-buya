@@ -125,6 +125,57 @@ export interface UpdateCharacterInput {
   order?: number;
 }
 
+export interface Region {
+  id: string;
+  universeId: string;
+  regionId: string;
+  name: string;
+  description: string | null;
+  cultureGuide: string | null;
+  geography: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateRegionInput {
+  regionId: string;
+  name: string;
+  description?: string;
+  cultureGuide?: string;
+  geography?: string;
+}
+
+export interface UpdateRegionInput {
+  name?: string;
+  description?: string | null;
+  cultureGuide?: string | null;
+  geography?: string | null;
+}
+
+// ---- Regions ----
+
+export const regionsApi = {
+  list: (universeId: string) =>
+    request<{ regions: Region[] }>(`/api/universes/${universeId}/regions`),
+
+  create: (universeId: string, input: CreateRegionInput) =>
+    request<{ region: Region }>(`/api/universes/${universeId}/regions`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  update: (universeId: string, regionId: string, input: UpdateRegionInput) =>
+    request<{ region: Region }>(`/api/universes/${universeId}/regions/${regionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
+
+  remove: (universeId: string, regionId: string) =>
+    request<{ success: true }>(`/api/universes/${universeId}/regions/${regionId}`, {
+      method: 'DELETE',
+    }),
+};
+
 // ---- Characters ----
 
 export const charactersApi = {
