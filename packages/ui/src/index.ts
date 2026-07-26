@@ -8,4 +8,6 @@ export * from './components/ui/progress';
 export * from './components/ui/dialog';
 export * from './components/ui/dropdown-menu';
 export * from './components/ui/select';
+export * from './components/ui/tabs';
+export * from './components/editors/BibleEditor';
 export { cn } from './lib/utils';

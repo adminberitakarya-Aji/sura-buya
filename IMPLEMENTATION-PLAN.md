@@ -1043,7 +1043,7 @@ PATCH  /api/universes/:id/ai-config/:task
 | 3.1 | NextAuth setup: Credentials + GitHub + Google | `apps/web/src/lib/auth.ts` | [x] |
 | 3.2 | Prisma schema + migrations + seed script | `apps/web/prisma/` | [x] |
 | 3.3 | Universe list page + create wizard (5 steps) | `apps/web/src/app/(dashboard)/[universeId]/` | [x] |
-| 3.4 | Bible file editor: Markdown + frontmatter, live preview | `packages/ui/src/components/editors/BibleEditor.tsx` | [ ] |
+| 3.4 | Bible file editor: Markdown + frontmatter, live preview | `packages/ui/src/components/editors/BibleEditor.tsx` | [x] |
 | 3.5 | Character manager: CRUD + voice guide editor | `apps/web/src/app/(dashboard)/[universeId]/characters/` | [x] |
 | 3.6 | Region/World manager | `apps/web/src/app/(dashboard)/[universeId]/world/` | [x] |
 | 3.7 | Settings: AI provider config per task, encrypted API keys | `apps/web/src/app/(dashboard)/[universeId]/settings/ai-providers/` | [ ] |

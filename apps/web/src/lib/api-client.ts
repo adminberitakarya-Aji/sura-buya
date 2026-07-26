@@ -152,6 +152,69 @@ export interface UpdateRegionInput {
   geography?: string | null;
 }
 
+export type BibleCategory = 'CHARACTER' | 'WORLD' | 'STORY' | 'VISUAL' | 'PRODUCTION';
+
+export interface BibleFileSummary {
+  id: string;
+  category: BibleCategory;
+  path: string;
+  title: string;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BibleFileDetail extends BibleFileSummary {
+  universeId: string;
+  content: string;
+  frontmatter: Record<string, unknown> | null;
+}
+
+export interface CreateBibleFileInput {
+  category: BibleCategory;
+  path: string;
+  title: string;
+  content: string;
+  frontmatter?: Record<string, unknown>;
+}
+
+export interface UpdateBibleFileInput {
+  title?: string;
+  content?: string;
+  frontmatter?: Record<string, unknown> | null;
+}
+
+// ---- Bible Files ----
+
+export const bibleApi = {
+  list: (universeId: string, category?: BibleCategory) =>
+    request<{ bibleFiles: BibleFileSummary[] }>(
+      `/api/universes/${universeId}/bible${category ? `?category=${category}` : ''}`
+    ),
+
+  get: (universeId: string, bibleFileId: string) =>
+    request<{ bibleFile: BibleFileDetail }>(
+      `/api/universes/${universeId}/bible/${bibleFileId}`
+    ),
+
+  create: (universeId: string, input: CreateBibleFileInput) =>
+    request<{ bibleFile: BibleFileDetail }>(`/api/universes/${universeId}/bible`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  update: (universeId: string, bibleFileId: string, input: UpdateBibleFileInput) =>
+    request<{ bibleFile: BibleFileDetail }>(
+      `/api/universes/${universeId}/bible/${bibleFileId}`,
+      { method: 'PATCH', body: JSON.stringify(input) }
+    ),
+
+  remove: (universeId: string, bibleFileId: string) =>
+    request<{ success: true }>(`/api/universes/${universeId}/bible/${bibleFileId}`, {
+      method: 'DELETE',
+    }),
+};
+
 // ---- Regions ----
 
 export const regionsApi = {
