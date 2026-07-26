@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "echo 'Run lint from repo root: pnpm lint'",
+    "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
@@ -29,7 +29,9 @@
     "zod": "^3.22.4",
     "zustand": "^5.0.14",
     "@suro-buya/shared": "workspace:*",
-    "@suro-buya/engine-v2": "workspace:*"
+    "@suro-buya/engine-v2": "workspace:*",
+    "@suro-buya/ui": "workspace:*",
+    "lucide-react": "^0.383.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
@@ -40,6 +42,7 @@
     "eslint": "^8.56.0",
     "eslint-config-next": "14.2.0",
     "tailwindcss": "^3.4.0",
+    "tailwindcss-animate": "^1.0.7",
     "postcss": "^8.4.0",
     "autoprefixer": "^10.4.0",
     "prisma": "^5.10.0",

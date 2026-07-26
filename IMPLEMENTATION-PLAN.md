@@ -1042,7 +1042,7 @@ PATCH  /api/universes/:id/ai-config/:task
 |------|-------------|-------|------|
 | 3.1 | NextAuth setup: Credentials + GitHub + Google | `apps/web/src/lib/auth.ts` | [x] |
 | 3.2 | Prisma schema + migrations + seed script | `apps/web/prisma/` | [x] |
-| 3.3 | Universe list page + create wizard (5 steps) | `apps/web/src/app/(dashboard)/[universeId]/` | [ ] |
+| 3.3 | Universe list page + create wizard (5 steps) | `apps/web/src/app/(dashboard)/[universeId]/` | [x] |
 | 3.4 | Bible file editor: Markdown + frontmatter, live preview | `packages/ui/src/components/editors/BibleEditor.tsx` | [ ] |
 | 3.5 | Character manager: CRUD + voice guide editor | `apps/web/src/app/(dashboard)/[universeId]/characters/` | [ ] |
 | 3.6 | Region/World manager | `apps/web/src/app/(dashboard)/[universeId]/world/` | [ ] |
@@ -1147,15 +1147,15 @@ universe-bible/                    →  universes/suro-buya/
 - [x] ESLint + Prettier configured, `pnpm lint` passes
 
 ### Phase 1 (Engine Core)
-- [ ] All unit tests pass (`pnpm test`)
-- [ ] Coverage ≥80% for core modules
-- [ ] Integration test: generate scene for test universe
+- [x] All unit tests pass (`pnpm test`)
+- [x] Coverage ≥80% for core modules
+- [x] Integration test: generate scene for test universe
 - [x] No hardcoded Suro/Buya references in engine
 
 ### Phase 2 (CLI + Scaffold)
-- [ ] `pnpm cli create-universe test-ip` creates working universe
-- [ ] `pnpm cli generate-scene --universe=test-ip` produces valid scene
-- [ ] `pnpm cli validate-universe --universe=test-ip` passes
+- [x] `pnpm cli create-universe test-ip` creates working universe
+- [x] `pnpm cli generate-scene --universe=test-ip` produces valid scene
+- [x] `pnpm cli validate-universe --universe=test-ip` passes
 
 ### Phase 3 (Dashboard CRUD)
 - [ ] Auth: register, login, OAuth works

@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ['@suro-buya/shared', '@suro-buya/engine-v2'],
+  transpilePackages: ['@suro-buya/shared', '@suro-buya/engine-v2', '@suro-buya/ui'],
   experimental: {
     serverActions: {
       bodySizeLimit: '2mb',
