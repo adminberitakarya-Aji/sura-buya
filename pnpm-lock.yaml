@@ -23,7 +23,7 @@ importers:
 
   apps/cli:
     dependencies:
-      '@suro-buya/cli':
+      '@suro-buya/cli-commands':
         specifier: workspace:*
         version: link:../../packages/cli
       '@suro-buya/engine-v2':
