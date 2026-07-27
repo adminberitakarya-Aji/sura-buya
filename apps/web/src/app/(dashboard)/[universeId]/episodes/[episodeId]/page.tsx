@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -19,14 +19,39 @@ import {
   Input,
   Textarea,
   Label,
+  AIGenerateWizard,
+  type GenerateWizardValues,
+  type StreamStatus,
 } from '@suro-buya/ui';
-import { episodesApi, scenesApi, type Scene } from '@/lib/api-client';
+import {
+  episodesApi,
+  scenesApi,
+  charactersApi,
+  regionsApi,
+  generateSceneStream,
+  type Scene,
+} from '@/lib/api-client';
 import { EPISODE_STATUS_BADGE, SCENE_STATUS_BADGE, SCENE_STATUS_LABEL } from '../status-styles';
+
+interface StreamState {
+  status: StreamStatus;
+  progress: number;
+  currentStep?: string;
+  streamedText: string;
+  errorMessage?: string;
+  finalText?: string;
+}
+
+const IDLE_STREAM_STATE: StreamState = { status: 'idle', progress: 0, streamedText: '' };
 
 export default function EpisodeDetailPage() {
   const params = useParams<{ universeId: string; episodeId: string }>();
   const { universeId, episodeId } = params;
   const queryClient = useQueryClient();
+
+  const [wizardScene, setWizardScene] = useState<Scene | null>(null);
+  const [streamState, setStreamState] = useState<StreamState>(IDLE_STREAM_STATE);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const [sceneFormOpen, setSceneFormOpen] = useState(false);
   const [sceneToDelete, setSceneToDelete] = useState<Scene | null>(null);
@@ -44,6 +69,16 @@ export default function EpisodeDetailPage() {
     queryFn: () => scenesApi.list(universeId, episodeId),
   });
 
+  const charactersQuery = useQuery({
+    queryKey: ['characters', universeId],
+    queryFn: () => charactersApi.list(universeId),
+  });
+
+  const regionsQuery = useQuery({
+    queryKey: ['regions', universeId],
+    queryFn: () => regionsApi.list(universeId),
+  });
+
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['scenes', universeId, episodeId] });
     queryClient.invalidateQueries({ queryKey: ['episode', universeId, episodeId] });
@@ -51,6 +86,14 @@ export default function EpisodeDetailPage() {
   };
 
   const scenes = scenesQuery.data?.scenes ?? [];
+  const availableCharacters = (charactersQuery.data?.characters ?? []).map((c) => ({
+    id: c.characterId,
+    name: c.displayName || c.name,
+  }));
+  const availableRegions = (regionsQuery.data?.regions ?? []).map((r) => ({
+    id: r.regionId,
+    name: r.name,
+  }));
 
   const createSceneMutation = useMutation({
     mutationFn: () =>
@@ -81,8 +124,73 @@ export default function EpisodeDetailPage() {
     },
   });
 
+  const acceptSceneMutation = useMutation({
+    mutationFn: (finalText: string) => {
+      if (!wizardScene) throw new Error('No scene selected');
+      return scenesApi.update(universeId, episodeId, wizardScene.id, {
+        generatedText: finalText,
+        status: 'VALIDATED',
+      });
+    },
+    onSuccess: () => {
+      invalidate();
+      setWizardScene(null);
+      setStreamState(IDLE_STREAM_STATE);
+    },
+  });
+
   const episode = episodeQuery.data?.episode;
   const isLoading = episodeQuery.isLoading || scenesQuery.isLoading;
+
+  function openWizard(scene: Scene) {
+    setWizardScene(scene);
+    setStreamState(IDLE_STREAM_STATE);
+  }
+
+  function handleGenerate(values: GenerateWizardValues) {
+    if (!wizardScene) return;
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    setStreamState({ status: 'connecting', progress: 0, streamedText: '' });
+
+    generateSceneStream(
+      universeId,
+      episodeId,
+      wizardScene.id,
+      {
+        temperature: values.temperature,
+        specialInstructions: values.specialInstructions,
+      },
+      {
+        onChunk: (text) =>
+          setStreamState((prev) => ({
+            ...prev,
+            status: 'streaming',
+            streamedText: prev.streamedText + text,
+          })),
+        onProgress: (progress, step) =>
+          setStreamState((prev) => ({ ...prev, progress, currentStep: step })),
+        onDone: (_jobId, scene) =>
+          setStreamState((prev) => ({
+            ...prev,
+            status: 'done',
+            progress: 100,
+            finalText: scene.generatedText ?? prev.streamedText,
+          })),
+        onError: (message) =>
+          setStreamState((prev) => ({ ...prev, status: 'error', errorMessage: message })),
+      },
+      controller.signal
+    ).catch(() => {
+      // AbortError from a user-initiated cancel — already reflected via handleCancelGenerate.
+    });
+  }
+
+  function handleCancelGenerate() {
+    abortControllerRef.current?.abort();
+    setStreamState((prev) => ({ ...prev, status: 'cancelled' }));
+  }
 
   return (
     <div>
@@ -114,10 +222,6 @@ export default function EpisodeDetailPage() {
               <h1 className="mt-1 text-2xl font-bold text-foreground">{episode.title}</h1>
               <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{episode.premise}</p>
             </div>
-            <Button variant="outline" disabled title="Tersedia di step berikutnya (AI Generate Wizard)">
-              <Sparkles className="h-4 w-4" />
-              Generate Scene
-            </Button>
           </div>
 
           <div className="mb-4 flex items-center justify-between">
@@ -169,21 +273,65 @@ export default function EpisodeDetailPage() {
                           ))}
                         </div>
                       )}
+
+                      {scene.generatedText && (
+                        <pre className="mt-3 max-h-48 overflow-y-auto whitespace-pre-wrap rounded-md bg-muted/50 p-3 text-xs text-foreground">
+                          {scene.generatedText}
+                        </pre>
+                      )}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setSceneToDelete(scene)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                      <span className="sr-only">Hapus scene {scene.sceneNumber}</span>
-                    </Button>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button variant="outline" size="sm" onClick={() => openWizard(scene)}>
+                        <Sparkles className="h-4 w-4" />
+                        {scene.generatedText ? 'Regenerate' : 'Generate'}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setSceneToDelete(scene)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <span className="sr-only">Hapus scene {scene.sceneNumber}</span>
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
           )}
         </>
+      )}
+
+      {wizardScene && (
+        <AIGenerateWizard
+          open={wizardScene !== null}
+          onOpenChange={(open: boolean) => {
+            if (!open) {
+              setWizardScene(null);
+              setStreamState(IDLE_STREAM_STATE);
+            }
+          }}
+          sceneLabel={`Scene ${wizardScene.sceneNumber}`}
+          initialValues={{
+            premise: wizardScene.premise,
+            characters: wizardScene.characters,
+            region: wizardScene.region ?? undefined,
+            specialInstructions: '',
+            temperature: 0.7,
+          }}
+          availableCharacters={availableCharacters}
+          availableRegions={availableRegions}
+          status={streamState.status}
+          progress={streamState.progress}
+          currentStep={streamState.currentStep}
+          streamedText={streamState.streamedText}
+          errorMessage={streamState.errorMessage}
+          finalText={streamState.finalText}
+          onGenerate={handleGenerate}
+          onCancelGenerate={handleCancelGenerate}
+          onAccept={(finalText: string) => acceptSceneMutation.mutate(finalText)}
+          isSaving={acceptSceneMutation.isPending}
+        />
       )}
 
       <Dialog open={sceneFormOpen} onOpenChange={setSceneFormOpen}>

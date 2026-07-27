@@ -10,4 +10,6 @@ export * from './components/ui/dropdown-menu';
 export * from './components/ui/select';
 export * from './components/ui/tabs';
 export * from './components/editors/BibleEditor';
+export * from './components/generation/AIGenerateWizard';
+export * from './components/generation/ProgressStream';
 export { cn } from './lib/utils';

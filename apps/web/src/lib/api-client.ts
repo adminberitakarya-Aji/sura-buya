@@ -543,3 +543,76 @@ export const jobsApi = {
       body: JSON.stringify({ jobId }),
     }),
 };
+
+// ---- Scene generation (SSE) ----
+
+export interface GenerateSceneOptions {
+  temperature?: number;
+  maxTokens?: number;
+  specialInstructions?: string;
+}
+
+export interface GenerateSceneCallbacks {
+  onChunk?: (text: string) => void;
+  onProgress?: (progress: number, step?: string) => void;
+  onDone?: (jobId: string, scene: Scene) => void;
+  onError?: (message: string) => void;
+}
+
+/**
+ * Stream scene generation via Server-Sent Events. `EventSource` only
+ * supports GET, so this reads the fetch POST body stream manually and
+ * parses `event: ...\ndata: ...\n\n` frames as they arrive.
+ */
+export async function generateSceneStream(
+  universeId: string,
+  episodeId: string,
+  sceneId: string,
+  options: GenerateSceneOptions,
+  callbacks: GenerateSceneCallbacks,
+  signal?: AbortSignal
+): Promise<void> {
+  const res = await fetch(
+    `/api/universes/${universeId}/episodes/${episodeId}/scenes/${sceneId}/generate`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(options),
+      signal,
+    }
+  );
+
+  if (!res.ok || !res.body) {
+    const body = await res.json().catch(() => ({ error: 'Gagal memulai generation' }));
+    callbacks.onError?.(body.error ?? 'Gagal memulai generation');
+    return;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let frameEnd = buffer.indexOf('\n\n');
+    while (frameEnd !== -1) {
+      const frame = buffer.slice(0, frameEnd);
+      buffer = buffer.slice(frameEnd + 2);
+
+      const eventMatch = frame.match(/^event: (.+)$/m);
+      const dataMatch = frame.match(/^data: (.+)$/m);
+      const event = eventMatch?.[1];
+      const data = dataMatch?.[1] ? JSON.parse(dataMatch[1]) : {};
+
+      if (event === 'chunk') callbacks.onChunk?.(data.text ?? '');
+      else if (event === 'progress') callbacks.onProgress?.(data.progress, data.step);
+      else if (event === 'done') callbacks.onDone?.(data.jobId, data.scene);
+      else if (event === 'error') callbacks.onError?.(data.message ?? 'Generation gagal');
+
+      frameEnd = buffer.indexOf('\n\n');
+    }
+  }
+}

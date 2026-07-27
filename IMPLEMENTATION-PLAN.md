@@ -1058,16 +1058,26 @@ PATCH  /api/universes/:id/ai-config/:task
 | Task | Description | Files | Done |
 |------|-------------|-------|------|
 | 4.1 | Episode Planner UI: beat board, drag-drop | `packages/ui/src/components/planning/BeatBoard.tsx` | [ ] |
-| 4.2 | AI Generate Wizard: 4-step (Premise → Context → Generate → Review) | `packages/ui/src/components/generation/AIGenerateWizard.tsx` | [ ] |
+| 4.2 | AI Generate Wizard: 4-step (Premise → Context → Generate → Review) | `packages/ui/src/components/generation/AIGenerateWizard.tsx` | [x] |
 | 4.3 | Scene Editor: block-based (narrative, dialogue, action) | `packages/ui/src/components/editors/SceneEditor.tsx` | [ ] |
 | 4.4 | Real-time Canon Validator Panel: inline warnings, suggestions | `packages/ui/src/components/validation/CanonValidatorPanel.tsx` | [ ] |
-| 4.5 | Progress Streaming: SSE consumer for generation jobs | `packages/ui/src/components/generation/ProgressStream.tsx` | [ ] |
+| 4.5 | Progress Streaming: SSE consumer for generation jobs | `packages/ui/src/components/generation/ProgressStream.tsx` | [x] |
 | 4.6 | Review Package UI: side-by-side diff, approve/request changes | `packages/ui/src/components/review/ReviewPackage.tsx` | [ ] |
 | 4.7 | Episode/Scene list with status kanban | `apps/web/src/app/(dashboard)/[universeId]/episodes/` | [x] |
-| 4.8 | API routes: generation jobs, streaming, validation, review | `apps/web/src/app/api/generate/`, `api/validate/`, `api/reviews/` | [~] Season/Episode/Scene CRUD + job list/cancel done; generate/validate/review streaming routes pending (Step 2+) |
+| 4.8 | API routes: generation jobs, streaming, validation, review | `apps/web/src/app/api/generate/`, `api/validate/`, `api/reviews/` | [~] Season/Episode/Scene CRUD, job list/cancel, and scene generation SSE endpoint (`.../scenes/:id/generate`) done; validate/review routes pending |
 | 4.9 | GenerationJob persistence + status polling | `apps/web/src/lib/jobs.ts` | [x] |
 
 **Deliverable:** End-to-end: Create episode → Generate scenes → Review → Approve via web.
+
+**Architecture note (Step 2):** `packages/engine-v2`'s `ContextBuilder`/`BibleLoader` read bible
+content from the filesystem, but this dashboard stores bible/character/region data in Postgres.
+`apps/web/src/lib/engine/db-context.ts` bridges this gap — it builds the exact same
+`GenerationContext` shape directly from Prisma records, so `GenerationOrchestrator` and
+`CanonValidator` work unmodified against dashboard-managed universes. `lib/engine/orchestrator.ts`
+wires a universe's `AIConfig` rows (provider + decrypted API key per task) into a
+`ProviderRegistry`. Only `anthropic`, `openai`, and `ollama` have live chat-generation
+implementations in engine-v2 today; other provider strings are accepted by the settings UI but
+skipped when building the registry.
 
 ---
 
