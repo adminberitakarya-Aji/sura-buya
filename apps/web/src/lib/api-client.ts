@@ -215,6 +215,53 @@ export const bibleApi = {
     }),
 };
 
+export type AITask =
+  | 'CREATIVE_GENERATION'
+  | 'PLANNING'
+  | 'VALIDATION'
+  | 'EMBEDDING'
+  | 'IMAGE_PROMPT'
+  | 'CODE_GENERATION';
+
+export interface AIConfigSummary {
+  id: string;
+  task: AITask;
+  provider: string;
+  model: string;
+  parameters: Record<string, unknown> | null;
+  isDefault: boolean;
+  hasApiKey: boolean;
+  apiKeyMasked: string | null;
+  updatedAt: string;
+}
+
+export interface UpsertAIConfigInput {
+  provider: string;
+  model: string;
+  /** Omit to leave the stored key untouched; pass '' to clear it. */
+  apiKey?: string;
+  parameters?: Record<string, unknown>;
+  isDefault?: boolean;
+}
+
+// ---- AI Provider Config ----
+
+export const aiConfigApi = {
+  list: (universeId: string) =>
+    request<{ configs: AIConfigSummary[] }>(`/api/universes/${universeId}/ai-config`),
+
+  upsert: (universeId: string, task: AITask, input: UpsertAIConfigInput) =>
+    request<{ config: AIConfigSummary }>(`/api/universes/${universeId}/ai-config/${task}`, {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    }),
+
+  remove: (universeId: string, task: AITask) =>
+    request<{ success: true }>(`/api/universes/${universeId}/ai-config/${task}`, {
+      method: 'DELETE',
+    }),
+};
+
 // ---- Regions ----
 
 export const regionsApi = {

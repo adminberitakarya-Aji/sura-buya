@@ -309,7 +309,7 @@ model AIConfig {
   task        AITask
   provider    String   // "anthropic", "openai", "cohere"
   model       String   // "claude-3-5-sonnet", "gpt-4o"
-  apiKeyRef   String?  // reference to encrypted secret
+  apiKeyEncrypted String? // AES-256-GCM ciphertext of the API key; never store plaintext
   parameters  Json?    // temperature, maxTokens, etc.
   isDefault   Boolean  @default(false)
   createdAt   DateTime @default(now())
