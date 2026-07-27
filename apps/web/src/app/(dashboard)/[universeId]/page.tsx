@@ -92,6 +92,7 @@ export default function UniverseDetailPage() {
         <NavCard href={`/${universeId}/bible`} title="Universe Bible" description="Character, world, story, visual, production bible" />
         <NavCard href={`/${universeId}/characters`} title="Karakter" description="Kelola character bible & voice guide" />
         <NavCard href={`/${universeId}/world`} title="World" description="Kelola region & world bible" />
+        <NavCard href={`/${universeId}/episodes`} title="Episode" description="Rencanakan, generate, dan review episode" />
         <NavCard href={`/${universeId}/settings/ai-providers`} title="Pengaturan AI" description="Konfigurasi provider per task" />
       </div>
     </div>

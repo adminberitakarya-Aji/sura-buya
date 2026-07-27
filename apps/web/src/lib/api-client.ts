@@ -309,3 +309,237 @@ export const charactersApi = {
       method: 'DELETE',
     }),
 };
+
+// ---- Seasons ----
+
+export type SeasonStatus = 'PLANNING' | 'IN_PROGRESS' | 'COMPLETED' | 'ARCHIVED';
+
+export interface Season {
+  id: string;
+  universeId: string;
+  seasonNumber: number;
+  title: string;
+  theme: string | null;
+  arcSummary: string | null;
+  episodeCount: number;
+  status: SeasonStatus;
+  plan: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { episodes: number };
+}
+
+export interface CreateSeasonInput {
+  seasonNumber: number;
+  title: string;
+  theme?: string;
+  arcSummary?: string;
+  episodeCount?: number;
+}
+
+export const seasonsApi = {
+  list: (universeId: string) =>
+    request<{ seasons: Season[] }>(`/api/universes/${universeId}/seasons`),
+
+  get: (universeId: string, seasonId: string) =>
+    request<{ season: Season & { episodes: Episode[] } }>(
+      `/api/universes/${universeId}/seasons/${seasonId}`
+    ),
+
+  create: (universeId: string, input: CreateSeasonInput) =>
+    request<{ season: Season }>(`/api/universes/${universeId}/seasons`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  remove: (universeId: string, seasonId: string) =>
+    request<{ success: true }>(`/api/universes/${universeId}/seasons/${seasonId}`, {
+      method: 'DELETE',
+    }),
+};
+
+// ---- Episodes ----
+
+export type EpisodeStatus =
+  | 'PLANNING'
+  | 'GENERATING'
+  | 'REVIEW'
+  | 'APPROVED'
+  | 'PUBLISHED'
+  | 'ARCHIVED';
+
+export interface Episode {
+  id: string;
+  universeId: string;
+  seasonId: string;
+  episodeNumber: number;
+  title: string;
+  premise: string;
+  status: EpisodeStatus;
+  plan: Record<string, unknown> | null;
+  targetScenes: number;
+  createdAt: string;
+  updatedAt: string;
+  season?: { id: string; seasonNumber: number; title: string };
+  scenes?: Scene[];
+  _count?: { scenes: number };
+}
+
+export interface CreateEpisodeInput {
+  seasonId: string;
+  episodeNumber: number;
+  title: string;
+  premise: string;
+  targetScenes?: number;
+}
+
+export interface UpdateEpisodeInput {
+  title?: string;
+  premise?: string;
+  status?: EpisodeStatus;
+  targetScenes?: number;
+  plan?: Record<string, unknown> | null;
+}
+
+export const episodesApi = {
+  list: (universeId: string, seasonId?: string) =>
+    request<{ episodes: Episode[] }>(
+      `/api/universes/${universeId}/episodes${seasonId ? `?seasonId=${seasonId}` : ''}`
+    ),
+
+  get: (universeId: string, episodeId: string) =>
+    request<{ episode: Episode }>(`/api/universes/${universeId}/episodes/${episodeId}`),
+
+  create: (universeId: string, input: CreateEpisodeInput) =>
+    request<{ episode: Episode }>(`/api/universes/${universeId}/episodes`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  update: (universeId: string, episodeId: string, input: UpdateEpisodeInput) =>
+    request<{ episode: Episode }>(`/api/universes/${universeId}/episodes/${episodeId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    }),
+
+  remove: (universeId: string, episodeId: string) =>
+    request<{ success: true }>(`/api/universes/${universeId}/episodes/${episodeId}`, {
+      method: 'DELETE',
+    }),
+};
+
+// ---- Scenes ----
+
+export type SceneStatus = 'DRAFT' | 'GENERATED' | 'VALIDATED' | 'APPROVED' | 'REJECTED';
+
+export interface Scene {
+  id: string;
+  episodeId: string;
+  sceneNumber: number;
+  premise: string;
+  characters: string[];
+  region: string | null;
+  generatedText: string | null;
+  validationReport: Record<string, unknown> | null;
+  version: number;
+  status: SceneStatus;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSceneInput {
+  sceneNumber: number;
+  premise: string;
+  characters?: string[];
+  region?: string;
+}
+
+export interface UpdateSceneInput {
+  premise?: string;
+  characters?: string[];
+  region?: string | null;
+  generatedText?: string | null;
+  status?: SceneStatus;
+  validationReport?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
+  bumpVersion?: boolean;
+}
+
+export const scenesApi = {
+  list: (universeId: string, episodeId: string) =>
+    request<{ scenes: Scene[] }>(
+      `/api/universes/${universeId}/episodes/${episodeId}/scenes`
+    ),
+
+  get: (universeId: string, episodeId: string, sceneId: string) =>
+    request<{ scene: Scene }>(
+      `/api/universes/${universeId}/episodes/${episodeId}/scenes/${sceneId}`
+    ),
+
+  create: (universeId: string, episodeId: string, input: CreateSceneInput) =>
+    request<{ scene: Scene }>(`/api/universes/${universeId}/episodes/${episodeId}/scenes`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  update: (universeId: string, episodeId: string, sceneId: string, input: UpdateSceneInput) =>
+    request<{ scene: Scene }>(
+      `/api/universes/${universeId}/episodes/${episodeId}/scenes/${sceneId}`,
+      { method: 'PATCH', body: JSON.stringify(input) }
+    ),
+
+  remove: (universeId: string, episodeId: string, sceneId: string) =>
+    request<{ success: true }>(
+      `/api/universes/${universeId}/episodes/${episodeId}/scenes/${sceneId}`,
+      { method: 'DELETE' }
+    ),
+};
+
+// ---- Generation Jobs ----
+
+export type JobType =
+  | 'SCENE_GENERATION'
+  | 'EPISODE_PLANNING'
+  | 'SEASON_PLANNING'
+  | 'CANON_VALIDATION'
+  | 'EMBEDDING_INDEX';
+
+export type JobStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+
+export interface GenerationJobSummary {
+  id: string;
+  universeId: string;
+  userId: string;
+  type: JobType;
+  status: JobStatus;
+  input: Record<string, unknown>;
+  output: Record<string, unknown> | null;
+  progress: number;
+  currentStep: string | null;
+  error: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+}
+
+export const jobsApi = {
+  list: (universeId: string, filter?: { type?: JobType; status?: JobStatus }) => {
+    const qs = new URLSearchParams();
+    if (filter?.type) qs.set('type', filter.type);
+    if (filter?.status) qs.set('status', filter.status);
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return request<{ jobs: GenerationJobSummary[] }>(`/api/universes/${universeId}/jobs${suffix}`);
+  },
+
+  get: (universeId: string, jobId: string) =>
+    request<{ job: GenerationJobSummary }>(
+      `/api/universes/${universeId}/jobs?jobId=${jobId}`
+    ),
+
+  cancel: (universeId: string, jobId: string) =>
+    request<{ job: GenerationJobSummary }>(`/api/universes/${universeId}/jobs`, {
+      method: 'POST',
+      body: JSON.stringify({ jobId }),
+    }),
+};

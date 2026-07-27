@@ -1063,9 +1063,9 @@ PATCH  /api/universes/:id/ai-config/:task
 | 4.4 | Real-time Canon Validator Panel: inline warnings, suggestions | `packages/ui/src/components/validation/CanonValidatorPanel.tsx` | [ ] |
 | 4.5 | Progress Streaming: SSE consumer for generation jobs | `packages/ui/src/components/generation/ProgressStream.tsx` | [ ] |
 | 4.6 | Review Package UI: side-by-side diff, approve/request changes | `packages/ui/src/components/review/ReviewPackage.tsx` | [ ] |
-| 4.7 | Episode/Scene list with status kanban | `apps/web/src/app/(dashboard)/[universeId]/episodes/` | [ ] |
-| 4.8 | API routes: generation jobs, streaming, validation, review | `apps/web/src/app/api/generate/`, `api/validate/`, `api/reviews/` | [ ] |
-| 4.9 | GenerationJob persistence + status polling | `apps/web/src/lib/jobs.ts` | [ ] |
+| 4.7 | Episode/Scene list with status kanban | `apps/web/src/app/(dashboard)/[universeId]/episodes/` | [x] |
+| 4.8 | API routes: generation jobs, streaming, validation, review | `apps/web/src/app/api/generate/`, `api/validate/`, `api/reviews/` | [~] Season/Episode/Scene CRUD + job list/cancel done; generate/validate/review streaming routes pending (Step 2+) |
+| 4.9 | GenerationJob persistence + status polling | `apps/web/src/lib/jobs.ts` | [x] |
 
 **Deliverable:** End-to-end: Create episode → Generate scenes → Review → Approve via web.
 
