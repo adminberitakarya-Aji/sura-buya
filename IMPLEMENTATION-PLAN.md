@@ -1057,14 +1057,14 @@ PATCH  /api/universes/:id/ai-config/:task
 
 | Task | Description | Files | Done |
 |------|-------------|-------|------|
-| 4.1 | Episode Planner UI: beat board, drag-drop | `packages/ui/src/components/planning/BeatBoard.tsx` | [ ] |
+| 4.1 | Episode Planner UI: beat board, drag-drop | `packages/ui/src/components/planning/BeatBoard.tsx` | [x] |
 | 4.2 | AI Generate Wizard: 4-step (Premise → Context → Generate → Review) | `packages/ui/src/components/generation/AIGenerateWizard.tsx` | [x] |
-| 4.3 | Scene Editor: block-based (narrative, dialogue, action) | `packages/ui/src/components/editors/SceneEditor.tsx` | [ ] |
-| 4.4 | Real-time Canon Validator Panel: inline warnings, suggestions | `packages/ui/src/components/validation/CanonValidatorPanel.tsx` | [ ] |
+| 4.3 | Scene Editor: block-based (narrative, dialogue, action) | `packages/ui/src/components/editors/SceneEditor.tsx` | [x] |
+| 4.4 | Real-time Canon Validator Panel: inline warnings, suggestions | `packages/ui/src/components/validation/CanonValidatorPanel.tsx` | [x] |
 | 4.5 | Progress Streaming: SSE consumer for generation jobs | `packages/ui/src/components/generation/ProgressStream.tsx` | [x] |
-| 4.6 | Review Package UI: side-by-side diff, approve/request changes | `packages/ui/src/components/review/ReviewPackage.tsx` | [ ] |
+| 4.6 | Review Package UI: side-by-side diff, approve/request changes | `packages/ui/src/components/review/ReviewPackage.tsx` | [x] |
 | 4.7 | Episode/Scene list with status kanban | `apps/web/src/app/(dashboard)/[universeId]/episodes/` | [x] |
-| 4.8 | API routes: generation jobs, streaming, validation, review | `apps/web/src/app/api/generate/`, `api/validate/`, `api/reviews/` | [~] Season/Episode/Scene CRUD, job list/cancel, and scene generation SSE endpoint (`.../scenes/:id/generate`) done; validate/review routes pending |
+| 4.8 | API routes: generation jobs, streaming, validation, review | `apps/web/src/app/api/generate/`, `api/validate/`, `api/reviews/` | [x] Season/Episode/Scene CRUD, job list/cancel, scene generation SSE, canon validation, and scene reviews/versions all done. Episode-level (structure) generation route still pending, folds into 4.1. |
 | 4.9 | GenerationJob persistence + status polling | `apps/web/src/lib/jobs.ts` | [x] |
 
 **Deliverable:** End-to-end: Create episode → Generate scenes → Review → Approve via web.
@@ -1078,6 +1078,43 @@ wires a universe's `AIConfig` rows (provider + decrypted API key per task) into 
 `ProviderRegistry`. Only `anthropic`, `openai`, and `ollama` have live chat-generation
 implementations in engine-v2 today; other provider strings are accepted by the settings UI but
 skipped when building the registry.
+
+**Architecture note (Step 4):** DB `CanonRule` rows (regex pattern + severity, editable by non-devs)
+are converted into engine-v2 rule-engine callbacks in `lib/engine/validator.ts`. `CUSTOM_LLM`-type
+rules can't be pattern-matched, so they're folded into the LLM judge's `JudgingCriteria` instead of
+the rule engine. Validation degrades gracefully to rule-engine-only (no LLM judge) if the universe
+has no `validation`-task AI provider configured, rather than failing outright.
+
+**Architecture note (Step 5):** Added a new `SceneVersion` model (schema.prisma) to snapshot scene
+content on every save (generation or manual edit), since `Scene` itself only stores the current
+text + a version counter. This is what powers the side-by-side diff in the Review Package.
+**Requires a migration** — after extracting this ZIP, run `npx prisma db push` (or `migrate dev`)
+in `apps/web` before using the Review feature, then `npx prisma generate` as usual. Approving a
+scene sets `Scene.status = APPROVED`; once every scene in an episode is approved, the episode
+itself flips to `APPROVED` automatically. "Request Changes" reverts scene status to `GENERATED`
+(back into the regenerate/edit loop) rather than blocking it outright.
+
+**Architecture note (Step 6):** Added a `Scene.blocks: Json?` field (schema.prisma) storing the
+structured `SceneOutput` (heading/action/dialogue/transition) as independently editable blocks.
+**Another migration required** — run `npx prisma db push` (or `migrate dev`) again after this
+step, then `npx prisma generate`. `generatedText` stays the flattened rendering of `blocks` and is
+regenerated on every block edit, so the canon validator and review diff (which both key off
+`generatedText`) keep working unchanged. Scenes generated before this step (or where structured
+output parsing failed) have `blocks = null`; the editor falls back to wrapping the existing plain
+text as a single "action" block the first time it's opened.
+
+**Architecture note (Step 7):** `lib/engine/episode-planner.ts` bridges `EpisodePlanner`
+(engine-v2) the same way the scene generator was bridged in Step 2 — builds `EpisodePlannerInput`
+from Postgres (episode premise/scene count, story profile themes/characters, previous episode in
+the same season for continuity) and reuses the same provider registry as scene generation.
+`generateEpisodePlan()` chains several LLM calls (structure → beats → character arcs → B-story),
+so it runs as a bounded background job (`runJob`, like canon validation) rather than a token
+stream. The Beat Board uses native HTML5 drag-and-drop (no new dependency) to move beats between
+acts or reorder within an act; "Buat Scene dari Rencana" bulk-creates `Scene` rows from
+`plan.scenes`, closing the loop from planning straight into the generate/validate/review workflow
+built in Steps 2–5. No schema migration needed this time — `Episode.plan` already existed.
+
+**Phase 4 (Web Dashboard — Generation & Review) is now fully complete: all 9 sub-tasks (4.1–4.9) done.**
 
 ---
 

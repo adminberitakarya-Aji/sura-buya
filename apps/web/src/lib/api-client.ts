@@ -1,3 +1,5 @@
+import type { SceneEditorBlock, BeatBoardBeat } from '@suro-buya/ui';
+
 export class ApiError extends Error {
   status: number;
   details?: unknown;
@@ -440,6 +442,7 @@ export interface Scene {
   characters: string[];
   region: string | null;
   generatedText: string | null;
+  blocks: SceneEditorBlock[] | null;
   validationReport: Record<string, unknown> | null;
   version: number;
   status: SceneStatus;
@@ -496,6 +499,51 @@ export const scenesApi = {
     ),
 };
 
+export const blocksApi = {
+  update: (universeId: string, episodeId: string, sceneId: string, blocks: SceneEditorBlock[]) =>
+    request<{ scene: Scene }>(
+      `/api/universes/${universeId}/episodes/${episodeId}/scenes/${sceneId}/blocks`,
+      { method: 'PATCH', body: JSON.stringify({ blocks }) }
+    ),
+};
+
+// ---- Episode Planning (Beat Board) ----
+
+export interface EpisodePlan {
+  id: string;
+  season: number;
+  number: number;
+  title: string;
+  logline: string;
+  summary: string;
+  beats: BeatBoardBeat[];
+  acts: unknown[];
+  scenes: { number: number; location: string; characters: string[]; summary: string }[];
+  characterArcs: unknown[];
+  themes: string[];
+  runtimeMinutes: number;
+}
+
+export const planApi = {
+  generate: (universeId: string, episodeId: string) =>
+    request<{ job: GenerationJobSummary; plan: EpisodePlan }>(
+      `/api/universes/${universeId}/episodes/${episodeId}/plan`,
+      { method: 'POST' }
+    ),
+
+  updateBeats: (universeId: string, episodeId: string, beats: BeatBoardBeat[]) =>
+    request<{ plan: EpisodePlan }>(`/api/universes/${universeId}/episodes/${episodeId}/plan`, {
+      method: 'PATCH',
+      body: JSON.stringify({ beats }),
+    }),
+
+  createScenesFromPlan: (universeId: string, episodeId: string) =>
+    request<{ created: number; scenes: Scene[] }>(
+      `/api/universes/${universeId}/episodes/${episodeId}/scenes/from-plan`,
+      { method: 'POST' }
+    ),
+};
+
 // ---- Generation Jobs ----
 
 export type JobType =
@@ -542,6 +590,79 @@ export const jobsApi = {
       method: 'POST',
       body: JSON.stringify({ jobId }),
     }),
+};
+
+// ---- Canon Validation ----
+
+export interface ValidationIssue {
+  path: string;
+  message: string;
+  code: string;
+}
+
+export interface CanonValidationSummary {
+  valid: boolean;
+  consistencyScore: number;
+  violations: unknown[];
+  errors: ValidationIssue[];
+  warnings: ValidationIssue[];
+  infos: ValidationIssue[];
+}
+
+export const validationApi = {
+  run: (universeId: string, episodeId: string, sceneId: string) =>
+    request<{ job: GenerationJobSummary; validation: CanonValidationSummary }>(
+      `/api/universes/${universeId}/episodes/${episodeId}/scenes/${sceneId}/validate`,
+      { method: 'POST' }
+    ),
+};
+
+// ---- Scene Versions & Reviews ----
+
+export interface SceneVersion {
+  id: string;
+  sceneId: string;
+  version: number;
+  content: string;
+  createdAt: string;
+}
+
+export type ReviewDecision = 'APPROVE' | 'REQUEST_CHANGES' | 'REJECT';
+
+export interface Review {
+  id: string;
+  sceneId: string;
+  reviewerId: string;
+  decision: ReviewDecision;
+  feedback: string | null;
+  annotations: Record<string, unknown> | null;
+  createdAt: string;
+  reviewer?: { id: string; name: string | null; email: string };
+}
+
+export const sceneVersionsApi = {
+  list: (universeId: string, episodeId: string, sceneId: string) =>
+    request<{ versions: SceneVersion[] }>(
+      `/api/universes/${universeId}/episodes/${episodeId}/scenes/${sceneId}/versions`
+    ),
+};
+
+export const reviewsApi = {
+  list: (universeId: string, episodeId: string, sceneId: string) =>
+    request<{ reviews: Review[] }>(
+      `/api/universes/${universeId}/episodes/${episodeId}/scenes/${sceneId}/reviews`
+    ),
+
+  create: (
+    universeId: string,
+    episodeId: string,
+    sceneId: string,
+    input: { decision: ReviewDecision; feedback?: string }
+  ) =>
+    request<{ review: Review; scene: Scene }>(
+      `/api/universes/${universeId}/episodes/${episodeId}/scenes/${sceneId}/reviews`,
+      { method: 'POST', body: JSON.stringify(input) }
+    ),
 };
 
 // ---- Scene generation (SSE) ----

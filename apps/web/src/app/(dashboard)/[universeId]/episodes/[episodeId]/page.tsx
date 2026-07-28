@@ -20,8 +20,14 @@ import {
   Textarea,
   Label,
   AIGenerateWizard,
+  CanonValidatorPanel,
+  ReviewPackage,
+  SceneEditor,
   type GenerateWizardValues,
   type StreamStatus,
+  type ValidatorStatus,
+  type CanonValidationSummary as UiCanonValidationSummary,
+  type SceneEditorBlock,
 } from '@suro-buya/ui';
 import {
   episodesApi,
@@ -29,7 +35,12 @@ import {
   charactersApi,
   regionsApi,
   generateSceneStream,
+  validationApi,
+  sceneVersionsApi,
+  reviewsApi,
+  blocksApi,
   type Scene,
+  type ReviewDecision,
 } from '@/lib/api-client';
 import { EPISODE_STATUS_BADGE, SCENE_STATUS_BADGE, SCENE_STATUS_LABEL } from '../status-styles';
 
@@ -42,6 +53,12 @@ interface StreamState {
   finalText?: string;
 }
 
+interface ValidationState {
+  status: ValidatorStatus;
+  result?: UiCanonValidationSummary;
+  errorMessage?: string;
+}
+
 const IDLE_STREAM_STATE: StreamState = { status: 'idle', progress: 0, streamedText: '' };
 
 export default function EpisodeDetailPage() {
@@ -52,6 +69,10 @@ export default function EpisodeDetailPage() {
   const [wizardScene, setWizardScene] = useState<Scene | null>(null);
   const [streamState, setStreamState] = useState<StreamState>(IDLE_STREAM_STATE);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [validationState, setValidationState] = useState<Record<string, ValidationState>>({});
+  const [reviewScene, setReviewScene] = useState<Scene | null>(null);
+  const [editScene, setEditScene] = useState<Scene | null>(null);
+  const [editBlocks, setEditBlocks] = useState<SceneEditorBlock[]>([]);
 
   const [sceneFormOpen, setSceneFormOpen] = useState(false);
   const [sceneToDelete, setSceneToDelete] = useState<Scene | null>(null);
@@ -139,12 +160,62 @@ export default function EpisodeDetailPage() {
     },
   });
 
+  const versionsQuery = useQuery({
+    queryKey: ['scene-versions', universeId, episodeId, reviewScene?.id],
+    queryFn: () => sceneVersionsApi.list(universeId, episodeId, reviewScene!.id),
+    enabled: reviewScene !== null,
+  });
+
+  const reviewsQuery = useQuery({
+    queryKey: ['scene-reviews', universeId, episodeId, reviewScene?.id],
+    queryFn: () => reviewsApi.list(universeId, episodeId, reviewScene!.id),
+    enabled: reviewScene !== null,
+  });
+
+  const submitReviewMutation = useMutation({
+    mutationFn: ({ decision, feedback }: { decision: ReviewDecision; feedback: string }) => {
+      if (!reviewScene) throw new Error('No scene selected');
+      return reviewsApi.create(universeId, episodeId, reviewScene.id, {
+        decision,
+        feedback: feedback.trim() || undefined,
+      });
+    },
+    onSuccess: () => {
+      invalidate();
+      queryClient.invalidateQueries({ queryKey: ['scene-reviews', universeId, episodeId] });
+      setReviewScene(null);
+    },
+  });
+
+  const saveBlocksMutation = useMutation({
+    mutationFn: () => {
+      if (!editScene) throw new Error('No scene selected');
+      return blocksApi.update(universeId, episodeId, editScene.id, editBlocks);
+    },
+    onSuccess: () => {
+      invalidate();
+      setEditScene(null);
+    },
+  });
+
   const episode = episodeQuery.data?.episode;
   const isLoading = episodeQuery.isLoading || scenesQuery.isLoading;
 
   function openWizard(scene: Scene) {
     setWizardScene(scene);
     setStreamState(IDLE_STREAM_STATE);
+  }
+
+  const initialEditBlocksRef = useRef<string>('');
+
+  function openEditor(scene: Scene) {
+    const fallbackBlocks: SceneEditorBlock[] = scene.generatedText
+      ? [{ id: 'legacy-text', type: 'action', text: scene.generatedText }]
+      : [];
+    const blocks = scene.blocks && scene.blocks.length > 0 ? scene.blocks : fallbackBlocks;
+    setEditScene(scene);
+    setEditBlocks(blocks);
+    initialEditBlocksRef.current = JSON.stringify(blocks);
   }
 
   function handleGenerate(values: GenerateWizardValues) {
@@ -192,6 +263,23 @@ export default function EpisodeDetailPage() {
     setStreamState((prev) => ({ ...prev, status: 'cancelled' }));
   }
 
+  async function handleValidateScene(scene: Scene) {
+    setValidationState((prev) => ({ ...prev, [scene.id]: { status: 'running' } }));
+    try {
+      const { validation } = await validationApi.run(universeId, episodeId, scene.id);
+      setValidationState((prev) => ({ ...prev, [scene.id]: { status: 'done', result: validation } }));
+      invalidate();
+    } catch (err) {
+      setValidationState((prev) => ({
+        ...prev,
+        [scene.id]: {
+          status: 'error',
+          errorMessage: err instanceof Error ? err.message : 'Validasi gagal',
+        },
+      }));
+    }
+  }
+
   return (
     <div>
       <Link
@@ -222,6 +310,9 @@ export default function EpisodeDetailPage() {
               <h1 className="mt-1 text-2xl font-bold text-foreground">{episode.title}</h1>
               <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{episode.premise}</p>
             </div>
+            <Link href={`/${universeId}/episodes/${episodeId}/plan`}>
+              <Button variant="outline">Rencana Beat</Button>
+            </Link>
           </div>
 
           <div className="mb-4 flex items-center justify-between">
@@ -279,12 +370,38 @@ export default function EpisodeDetailPage() {
                           {scene.generatedText}
                         </pre>
                       )}
+
+                      {scene.generatedText && (
+                        <CanonValidatorPanel
+                          className="mt-3"
+                          status={
+                            validationState[scene.id]?.status ??
+                            (scene.validationReport ? 'done' : 'idle')
+                          }
+                          result={
+                            validationState[scene.id]?.result ??
+                            (scene.validationReport as unknown as UiCanonValidationSummary | undefined)
+                          }
+                          errorMessage={validationState[scene.id]?.errorMessage}
+                          onRunValidation={() => handleValidateScene(scene)}
+                        />
+                      )}
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
                       <Button variant="outline" size="sm" onClick={() => openWizard(scene)}>
                         <Sparkles className="h-4 w-4" />
                         {scene.generatedText ? 'Regenerate' : 'Generate'}
                       </Button>
+                      {scene.generatedText && (
+                        <Button variant="outline" size="sm" onClick={() => openEditor(scene)}>
+                          Edit
+                        </Button>
+                      )}
+                      {scene.generatedText && (
+                        <Button variant="outline" size="sm" onClick={() => setReviewScene(scene)}>
+                          Review
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -305,7 +422,7 @@ export default function EpisodeDetailPage() {
       {wizardScene && (
         <AIGenerateWizard
           open={wizardScene !== null}
-          onOpenChange={(open: boolean) => {
+          onOpenChange={(open) => {
             if (!open) {
               setWizardScene(null);
               setStreamState(IDLE_STREAM_STATE);
@@ -329,10 +446,57 @@ export default function EpisodeDetailPage() {
           finalText={streamState.finalText}
           onGenerate={handleGenerate}
           onCancelGenerate={handleCancelGenerate}
-          onAccept={(finalText: string) => acceptSceneMutation.mutate(finalText)}
+          onAccept={(finalText) => acceptSceneMutation.mutate(finalText)}
           isSaving={acceptSceneMutation.isPending}
         />
       )}
+
+      <Dialog open={reviewScene !== null} onOpenChange={(open) => !open && setReviewScene(null)}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Review Scene {reviewScene?.sceneNumber}</DialogTitle>
+            <DialogDescription>
+              Bandingkan versi, lalu approve, minta perbaikan, atau reject.
+            </DialogDescription>
+          </DialogHeader>
+          {reviewScene && (
+            <ReviewPackage
+              sceneLabel={`Scene ${reviewScene.sceneNumber}`}
+              versions={versionsQuery.data?.versions ?? []}
+              reviews={(reviewsQuery.data?.reviews ?? []).map((r) => ({
+                id: r.id,
+                reviewerName: r.reviewer?.name || r.reviewer?.email || 'Reviewer',
+                decision: r.decision,
+                feedback: r.feedback,
+                createdAt: r.createdAt,
+              }))}
+              isSubmitting={submitReviewMutation.isPending}
+              onSubmitReview={(decision, feedback) =>
+                submitReviewMutation.mutate({ decision, feedback })
+              }
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editScene !== null} onOpenChange={(open) => !open && setEditScene(null)}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Scene {editScene?.sceneNumber}</DialogTitle>
+            <DialogDescription>
+              Edit per-block (aksi, dialog, transisi) — lebih presisi daripada edit teks polos.
+            </DialogDescription>
+          </DialogHeader>
+          <SceneEditor
+            blocks={editBlocks}
+            onChange={setEditBlocks}
+            availableCharacters={availableCharacters}
+            onSave={() => saveBlocksMutation.mutate()}
+            isSaving={saveBlocksMutation.isPending}
+            isDirty={JSON.stringify(editBlocks) !== initialEditBlocksRef.current}
+          />
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={sceneFormOpen} onOpenChange={setSceneFormOpen}>
         <DialogContent>

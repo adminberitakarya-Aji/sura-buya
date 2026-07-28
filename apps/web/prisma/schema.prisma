@@ -222,6 +222,7 @@ model Scene {
   characters      String[] // characterIds
   region          String?
   generatedText   String?  @db.Text
+  blocks          Json?    // structured SceneBlock[] for the block-based editor; generatedText is kept in sync as the flattened rendering
   validationReport Json?
   version         Int      @default(1)
   status          SceneStatus @default(DRAFT)
@@ -231,6 +232,7 @@ model Scene {
 
   episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
   reviews Review[]
+  versions SceneVersion[]
 
   @@unique([episodeId, sceneNumber])
 }
@@ -241,6 +243,18 @@ enum SceneStatus {
   VALIDATED
   APPROVED
   REJECTED
+}
+
+model SceneVersion {
+  id        String   @id @default(cuid())
+  sceneId   String
+  version   Int
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  scene Scene @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+
+  @@unique([sceneId, version])
 }
 
 model BibleFile {

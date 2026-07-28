@@ -47,14 +47,14 @@ const ENGINE_CONFIG: EngineConfig = {
 };
 
 /**
- * Build a GenerationOrchestrator wired to this universe's configured AI
- * providers (as set in Settings → AI Providers). Throws
- * UnconfiguredProviderError if the universe has no CREATIVE_GENERATION
- * config, since that's the minimum needed for scene generation.
+ * Build a ProviderRegistry wired to this universe's configured AI providers
+ * (Settings → AI Providers). Throws UnconfiguredProviderError if nothing
+ * usable is configured. Shared by the generation orchestrator and the canon
+ * validator (which needs a 'validation'-task provider for its LLM judge).
  */
-export async function buildOrchestratorForUniverse(
+export async function buildProviderRegistryForUniverse(
   universeId: string
-): Promise<GenerationOrchestrator> {
+): Promise<ProviderRegistry> {
   const configs = await prisma.aIConfig.findMany({ where: { universeId } });
 
   if (configs.length === 0) {
@@ -121,8 +121,33 @@ export async function buildOrchestratorForUniverse(
     if (provider) registry.registerProvider(name, provider);
   }
 
+  return registry;
+}
+
+/**
+ * Build a GenerationOrchestrator wired to this universe's configured AI
+ * providers (as set in Settings → AI Providers). Throws
+ * UnconfiguredProviderError if the universe has no CREATIVE_GENERATION
+ * config, since that's the minimum needed for scene generation.
+ */
+export async function buildOrchestratorForUniverse(
+  universeId: string
+): Promise<GenerationOrchestrator> {
+  const { orchestrator } = await buildOrchestratorAndRegistryForUniverse(universeId);
+  return orchestrator;
+}
+
+/**
+ * Same as buildOrchestratorForUniverse, but also returns the underlying
+ * ProviderRegistry — useful for callers like EpisodePlanner that need both
+ * (avoids building the registry, and re-decrypting API keys, twice).
+ */
+export async function buildOrchestratorAndRegistryForUniverse(
+  universeId: string
+): Promise<{ orchestrator: GenerationOrchestrator; registry: ProviderRegistry }> {
+  const registry = await buildProviderRegistryForUniverse(universeId);
   const renderer = createDefaultRenderer();
   const orchestratorConfig = createDefaultOrchestratorConfig(ENGINE_CONFIG, registry, renderer);
 
-  return new GenerationOrchestrator(orchestratorConfig);
+  return { orchestrator: new GenerationOrchestrator(orchestratorConfig), registry };
 }

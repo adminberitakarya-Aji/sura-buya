@@ -7,7 +7,8 @@ import { requireUserId, unauthorized } from '@/lib/api-helpers';
 import { createJob, startJob, updateJobProgress, completeJob, failJob } from '@/lib/jobs';
 import { buildGenerationContext, buildSceneGenerationInput } from '@/lib/engine/db-context';
 import { buildOrchestratorForUniverse, UnconfiguredProviderError } from '@/lib/engine/orchestrator';
-import { parseSceneOutput, formatSceneOutput } from '@/lib/engine/scene-output';
+import { parseSceneOutput, formatSceneOutput, sceneOutputToBlocks } from '@/lib/engine/scene-output';
+import { snapshotSceneVersion } from '@/lib/scene-versions';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -130,11 +131,13 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           // Final event: parse structured output (if any) and persist the scene.
           const structured = parseSceneOutput(fullContent);
           const generatedText = structured ? formatSceneOutput(structured) : fullContent.trim();
+          const blocks = structured ? sceneOutputToBlocks(structured) : undefined;
 
           const updatedScene = await prisma.scene.update({
             where: { id: scene.id },
             data: {
               generatedText,
+              ...(blocks ? { blocks: blocks as unknown as Prisma.InputJsonValue } : {}),
               status: 'GENERATED',
               version: { increment: 1 },
               metadata: {
@@ -147,6 +150,8 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
               } as Prisma.InputJsonValue,
             },
           });
+
+          await snapshotSceneVersion(updatedScene.id, updatedScene.version, generatedText);
 
           await completeJob(job.id, {
             sceneId: updatedScene.id,
