@@ -23,7 +23,7 @@ import { buildProviderRegistryForUniverse } from './orchestrator';
  * CUSTOM_LLM rules aren't pattern-matchable — those are handled separately
  * as extra JudgingCriteria fed to the LLM judge (see buildJudgingCriteria).
  */
-function dbRuleToEngineRule(rule: DbCanonRule): EngineCanonRule | null {
+export function dbRuleToEngineRule(rule: DbCanonRule): EngineCanonRule | null {
   const severity = rule.severity.toLowerCase() as 'error' | 'warning' | 'info';
 
   function safeRegex(pattern: string, flags: string): RegExp | null {

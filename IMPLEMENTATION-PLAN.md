@@ -1116,6 +1116,19 @@ built in Steps 2–5. No schema migration needed this time — `Episode.plan` al
 
 **Phase 4 (Web Dashboard — Generation & Review) is now fully complete: all 9 sub-tasks (4.1–4.9) done.**
 
+**Audit note (fresh-clone full cycle: install → build → typecheck → `next build` → lint → test):**
+Found and fixed two real bugs: (1) webpack couldn't resolve `.js`-extensioned imports inside
+`packages/engine-v2`'s transpiled TS source, breaking `next build` in production — fixed via
+`webpack.resolve.extensionAlias` in `next.config.js`; (2) `snapshotSceneVersion` was missing from
+the Scene PATCH route (Step 5's version-history wiring didn't make it into the pushed code) —
+re-applied and covered by a regression test. Also added a full test suite for all 7 Phase 4 steps
+(135 new tests: CRUD routes, generation adapters, canon-rule conversion, review workflow, scene
+versioning, block editor, episode planner) plus vitest infra for `packages/ui` (which unlocked a
+dormant Phase 3 `BibleEditor.test.ts` that was never actually running), and fixed `packages/ui`'s
+`lint` script, which listed files individually and had silently drifted out of sync with every
+component added since Phase 3. Full monorepo `pnpm -r test` (28 test files just in `apps/web`) is
+green; `pnpm -r build` should now pass in CI as well.
+
 ---
 
 ### Phase 5: Advanced Features (Minggu 6-8)

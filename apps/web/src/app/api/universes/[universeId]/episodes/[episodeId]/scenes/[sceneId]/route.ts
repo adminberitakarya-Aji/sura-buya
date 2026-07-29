@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { assertCan } from '@/lib/rbac';
 import { requireUserId, unauthorized, errorResponse } from '@/lib/api-helpers';
+import { snapshotSceneVersion } from '@/lib/scene-versions';
 
 const SCENE_STATUSES = ['DRAFT', 'GENERATED', 'VALIDATED', 'APPROVED', 'REJECTED'] as const;
 
@@ -83,6 +84,10 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
           : {}),
       },
     });
+
+    if (shouldBumpVersion && generatedText) {
+      await snapshotSceneVersion(scene.id, scene.version, generatedText);
+    }
 
     return NextResponse.json({ scene });
   } catch (error) {
