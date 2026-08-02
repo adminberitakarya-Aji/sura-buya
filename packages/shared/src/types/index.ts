@@ -12,13 +12,13 @@ import { z } from 'zod';
 export interface BaseEntity {
   /** Unique identifier */
   id: string;
-  
+
   /** Creation timestamp (ISO 8601) */
   createdAt: string;
-  
+
   /** Last update timestamp (ISO 8601) */
   updatedAt: string;
-  
+
   /** Version number for optimistic locking */
   version: number;
 }
@@ -29,22 +29,22 @@ export interface BaseEntity {
 export interface UniverseConfig {
   /** Universe ID */
   id: string;
-  
+
   /** Universe name */
   name: string;
-  
+
   /** Universe version */
   version: string;
-  
+
   /** Default locale */
   locale: string;
-  
+
   /** Supported locales */
   locales: string[];
-  
+
   /** Timezone */
   timezone: string;
-  
+
   /** Metadata */
   metadata?: Record<string, unknown>;
 }
@@ -52,7 +52,7 @@ export interface UniverseConfig {
 /**
  * Character archetype
  */
-export type CharacterArchetype = 
+export type CharacterArchetype =
   | 'protagonist'
   | 'antagonist'
   | 'mentor'
@@ -70,19 +70,19 @@ export type CharacterArchetype =
 export interface CharacterProfile extends BaseEntity {
   /** Character name */
   name: string;
-  
+
   /** Character archetype */
   archetype: CharacterArchetype;
-  
+
   /** Brief description */
   description: string;
-  
+
   /** Detailed backstory */
   backstory?: string;
-  
+
   /** Personality traits */
   traits: string[];
-  
+
   /** Voice characteristics */
   voice?: {
     tone: string;
@@ -90,23 +90,23 @@ export interface CharacterProfile extends BaseEntity {
     speechPatterns: string[];
     catchphrases?: string[];
   };
-  
+
   /** Relationships with other characters */
   relationships?: Record<string, {
     type: string;
     description: string;
     strength: number; // 0-1
   }>;
-  
+
   /** Visual reference */
   visualReference?: string;
-  
+
   /** Abilities and skills */
   abilities?: string[];
-  
+
   /** Weaknesses */
   weaknesses?: string[];
-  
+
   /** Character arc */
   arc?: {
     start: string;
@@ -121,20 +121,20 @@ export interface CharacterProfile extends BaseEntity {
 export interface WorldProfile extends BaseEntity {
   /** World name */
   name: string;
-  
+
   /** World type */
   type: 'planet' | 'dimension' | 'region' | 'city' | 'location';
-  
+
   /** Description */
   description: string;
-  
+
   /** Geography */
   geography?: {
     climate: string;
     terrain: string[];
     landmarks: string[];
   };
-  
+
   /** Culture */
   culture?: {
     language: string[];
@@ -142,7 +142,7 @@ export interface WorldProfile extends BaseEntity {
     beliefs: string[];
     socialStructure: string;
   };
-  
+
   /** History */
   history?: {
     timeline: Array<{
@@ -151,10 +151,10 @@ export interface WorldProfile extends BaseEntity {
     }>;
     keyEvents: string[];
   };
-  
+
   /** Connected locations */
   connections?: string[];
-  
+
   /** Visual reference */
   visualReference?: string;
 }
@@ -165,40 +165,40 @@ export interface WorldProfile extends BaseEntity {
 export interface StoryProfile extends BaseEntity {
   /** Story title */
   title: string;
-  
+
   /** Story type */
   type: 'series' | 'season' | 'episode' | 'arc' | 'scene';
-  
+
   /** Logline */
   logline: string;
-  
+
   /** Synopsis */
   synopsis: string;
-  
+
   /** Themes */
   themes: string[];
-  
+
   /** Genre */
   genre: string[];
-  
+
   /** Target audience */
   audience: string;
-  
+
   /** Tone */
   tone: string;
-  
+
   /** Structure */
   structure?: {
     acts: number;
     beats: string[];
   };
-  
+
   /** Characters involved */
   characters: string[];
-  
+
   /** Worlds/locations */
   locations: string[];
-  
+
   /** Plot points */
   plotPoints: Array<{
     order: number;
@@ -213,16 +213,16 @@ export interface StoryProfile extends BaseEntity {
 export interface EpisodeStructure extends BaseEntity {
   /** Episode number */
   number: number;
-  
+
   /** Season number */
   season: number;
-  
+
   /** Title */
   title: string;
-  
+
   /** Summary */
   summary: string;
-  
+
   /** Scenes */
   scenes: Array<{
     number: number;
@@ -232,10 +232,10 @@ export interface EpisodeStructure extends BaseEntity {
     type: 'dialogue' | 'action' | 'exposition' | 'climax' | 'resolution';
     estimatedDuration: number; // minutes
   }>;
-  
+
   /** Themes for this episode */
   themes: string[];
-  
+
   /** Character arcs progressed */
   characterArcs: string[];
 }
@@ -246,22 +246,22 @@ export interface EpisodeStructure extends BaseEntity {
 export interface SceneData extends BaseEntity {
   /** Scene number */
   number: number;
-  
+
   /** Episode reference */
   episodeId: string;
-  
+
   /** Location */
   location: string;
-  
+
   /** Time of day */
   timeOfDay: string;
-  
+
   /** Characters present */
   characters: string[];
-  
+
   /** Scene type */
   type: 'dialogue' | 'action' | 'exposition' | 'climax' | 'resolution' | 'transition';
-  
+
   /** Beats */
   beats: Array<{
     order: number;
@@ -270,13 +270,13 @@ export interface SceneData extends BaseEntity {
     dialogue?: string;
     action?: string;
   }>;
-  
+
   /** Estimated duration (minutes) */
   estimatedDuration: number;
-  
+
   /** Visual notes */
   visualNotes?: string;
-  
+
   /** Audio notes */
   audioNotes?: string;
 }
@@ -287,23 +287,23 @@ export interface SceneData extends BaseEntity {
 export interface GenerationRequest {
   /** Request ID */
   requestId: string;
-  
+
   /** Universe ID */
   universeId: string;
-  
+
   /** Generation type */
   type: 'scene' | 'episode' | 'story' | 'character' | 'world' | 'dialogue';
-  
+
   /** Input parameters */
   input: Record<string, unknown>;
-  
+
   /** Context */
   context?: {
     previousScenes?: string[];
     characterStates?: Record<string, unknown>;
     worldState?: Record<string, unknown>;
   };
-  
+
   /** Options */
   options?: {
     model?: string;
@@ -319,20 +319,20 @@ export interface GenerationRequest {
 export interface GenerationResponse<T = unknown> {
   /** Request ID */
   requestId: string;
-  
+
   /** Success status */
   success: boolean;
-  
+
   /** Generated data */
   data?: T;
-  
+
   /** Error if failed */
   error?: {
     code: string;
     message: string;
     details?: unknown;
   };
-  
+
   /** Metadata */
   metadata: {
     model: string;
@@ -348,14 +348,14 @@ export interface GenerationResponse<T = unknown> {
 export interface ValidationResult {
   /** Valid status */
   valid: boolean;
-  
+
   /** Errors */
   errors: Array<{
     path: string;
     message: string;
     code: string;
   }>;
-  
+
   /** Warnings */
   warnings: Array<{
     path: string;
@@ -377,7 +377,7 @@ export interface CanonCheckResult extends ValidationResult {
     actual: unknown;
     suggestion?: string;
   }>;
-  
+
   /** Consistency score (0-1) */
   consistencyScore: number;
 }
@@ -388,19 +388,19 @@ export interface CanonCheckResult extends ValidationResult {
 export interface TemplateDefinition {
   /** Template ID */
   id: string;
-  
+
   /** Template name */
   name: string;
-  
+
   /** Template category */
   category: 'character' | 'world' | 'story' | 'episode' | 'scene' | 'prompt' | 'schema';
-  
+
   /** Description */
   description: string;
-  
+
   /** Template content (with placeholders) */
   content: string;
-  
+
   /** Variables */
   variables: Array<{
     name: string;
@@ -409,7 +409,7 @@ export interface TemplateDefinition {
     description: string;
     default?: unknown;
   }>;
-  
+
   /** Example usage */
   example?: Record<string, unknown>;
 }
@@ -425,7 +425,7 @@ export const SCHEMAS = {
     updatedAt: z.string().datetime(),
     version: z.number().int().positive(),
   }),
-  
+
   /** Universe config schema */
   universeConfig: z.object({
     id: z.string().min(1).max(64).regex(/^[a-z0-9-]+$/),
@@ -436,7 +436,7 @@ export const SCHEMAS = {
     timezone: z.string().min(1),
     metadata: z.record(z.unknown()).optional(),
   }),
-  
+
   /** Character profile schema */
   characterProfile: z.object({
     id: z.string().min(1),
@@ -445,8 +445,8 @@ export const SCHEMAS = {
     version: z.number().int().positive(),
     name: z.string().min(1).max(128),
     archetype: z.enum([
-      'protagonist', 'antagonist', 'mentor', 'sidekick', 
-      'love-interest', 'rival', 'comic-relief', 'mysterious', 
+      'protagonist', 'antagonist', 'mentor', 'sidekick',
+      'love-interest', 'rival', 'comic-relief', 'mysterious',
       'guardian', 'trickster'
     ]),
     description: z.string().min(1).max(1000),
@@ -472,7 +472,7 @@ export const SCHEMAS = {
       end: z.string(),
     }).optional(),
   }),
-  
+
   /** World profile schema */
   worldProfile: z.object({
     id: z.string().min(1),
@@ -503,7 +503,7 @@ export const SCHEMAS = {
     connections: z.array(z.string()).optional(),
     visualReference: z.string().optional(),
   }),
-  
+
   /** Generation request schema */
   generationRequest: z.object({
     requestId: z.string().uuid(),
@@ -532,3 +532,4 @@ export type UniverseConfigSchema = z.infer<typeof SCHEMAS.universeConfig>;
 export type CharacterProfileSchema = z.infer<typeof SCHEMAS.characterProfile>;
 export type WorldProfileSchema = z.infer<typeof SCHEMAS.worldProfile>;
 export type GenerationRequestSchema = z.infer<typeof SCHEMAS.generationRequest>;
+export * from './video.js';

@@ -25,8 +25,6 @@ model User {
   reviews       Review[]
   ownedUniverses Universe[] @relation("UniverseOwner")
   generationJobs GenerationJob[] @relation("GenerationJobUser")
-  comments       Comment[]
-  presences      Presence[]
 }
 
 model Account {
@@ -79,6 +77,15 @@ model Universe {
   version     String   @default("1.0.0")
   ownerId     String
   isPublic    Boolean  @default(false)
+  // VF-1.3: audiens/rating ditentukan per-universe, TIDAK ada default
+  // hardcode di level engine (lihat REDESIGN-VIDEO-FACTORY.md §2.3/§2.3.1
+  // dan Prinsip Desain #4). ALL_AGES dipilih sebagai default kolom murni
+  // supaya universe existing (Suro & Buya, dst) tidak perlu migrasi data
+  // manual saat kolom ini pertama kali ditambahkan — BUKAN pernyataan
+  // bahwa platform ini defaultnya untuk anak-anak; creator universe baru
+  // tetap harus mengonfirmasi/mengganti rating ini secara sadar di UI.
+  contentRating   ContentRating @default(ALL_AGES)
+  audienceProfile String?       @db.Text // deskripsi bebas, mis. "keluarga Indonesia, tema edukatif" — dikonsumsi persona-parser.ts & safety-review.ts
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -92,9 +99,14 @@ model Universe {
   regions          Region[]         @relation("RegionUniverse")
   seasons          Season[]         @relation("SeasonUniverse")
   generationJobs   GenerationJob[]  @relation("GenerationJobUniverse")
-  comparisonSessions ComparisonSession[]
-  comments         Comment[]
-  presences        Presence[]
+  videoSeries      VideoSeries[]    // VF-1.3
+}
+
+// VF-1.3 — lihat REDESIGN-VIDEO-FACTORY.md §2.3.1
+enum ContentRating {
+  ALL_AGES // aman untuk segala umur, termasuk anak-anak
+  TEEN     // remaja ke atas
+  MATURE   // dewasa — tema berat, boleh menegangkan/kompleks
 }
 
 model UniverseMember {
@@ -135,6 +147,7 @@ model Character {
   updatedAt    DateTime @updatedAt
 
   universe Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
+  characterAsset CharacterAsset? // VF-1.3 — lapisan visual/produksi video, opsional (tidak semua karakter dipakai di video)
 
   @@unique([universeId, characterId])
 }
@@ -145,6 +158,42 @@ enum CharacterRole {
   SUPPORTING
   ANTAGONIST
   NARRATOR
+}
+
+// ============================================================
+// VF-1.3 — AI Video Factory: Character Asset & Video Series
+// Lihat REDESIGN-VIDEO-FACTORY.md §2.3 untuk rasional lengkap.
+// Prinsip: model ini MELENGKAPI Character/Universe existing,
+// TIDAK menduplikasi field persona apapun.
+// ============================================================
+
+// Lapisan visual/produksi 1:1 di atas Character (Bible) existing.
+// `characterId` di sini merujuk Character.id (primary key), BUKAN
+// Character.characterId (field slug internal) — dua hal yang berbeda.
+model CharacterAsset {
+  id              String   @id @default(cuid())
+  characterId     String   @unique // FK ke Character.id
+  referenceImages String[]         // URL reference image — mekanisme konsistensi visual DEFAULT (bukan LoRA)
+  voiceProfile    Json?            // { provider, voiceId, settings } — lihat CharacterVisualProfile di @suro-buya/shared
+  loraConfig      Json?            // opsional, hanya dipakai kalau upgrade premium di VF-6 — TIDAK dipakai di MVP
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+}
+
+// Menaungi beberapa video/episode dengan karakter yang sama — continuity
+// naratif lintas episode. Video (VideoProject) ditambahkan di VF-2.1,
+// relasi videoProjects di-append ke model ini saat itu.
+model VideoSeries {
+  id           String   @id @default(cuid())
+  universeId   String
+  title        String
+  characterIds String[] // karakter utama yang muncul lintas episode series ini — reference ke Character.id
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  universe Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
 }
 
 model Region {
@@ -238,8 +287,6 @@ model Scene {
   episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
   reviews Review[]
   versions SceneVersion[]
-  comments Comment[]
-  presences Presence[]
 
   @@unique([episodeId, sceneNumber])
 }
@@ -403,102 +450,4 @@ enum JobStatus {
   COMPLETED
   FAILED
   CANCELLED
-}
-
-model ComparisonSession {
-  id            String   @id @default(cuid())
-  universeId    String
-  name          String
-  prompt        String   @db.Text
-  promptVariants Json    // per-model prompt variants
-  status        ComparisonStatus @default(PENDING)
-  config        Json     // model configs, params
-  createdBy     String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  completedAt   DateTime?
-  
-  universe      Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
-  results       ComparisonResult[]
-  winnerId      String?  @unique // references ComparisonResult.id
-  winner        ComparisonResult? @relation("WinnerResult", fields: [winnerId], references: [id])
-}
-
-model ComparisonResult {
-  id              String   @id @default(cuid())
-  sessionId       String
-  modelId         String   // provider:model format
-  modelName       String
-  provider        String
-  output          String   @db.Text
-  tokensUsed      Int
-  latencyMs       Int
-  costEstimate    Float
-  scores          Json     // {canon, quality, creativity, instruction, overall}
-  rank            Int?
-  error           String?  @db.Text
-  createdAt       DateTime @default(now())
-  
-  session         ComparisonSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  winningSession  ComparisonSession? @relation("WinnerResult")
-}
-
-model Comment {
-  id          String        @id @default(cuid())
-  universeId  String
-  sceneId     String?
-  blockId     String?       // For block-level comments
-  authorId    String
-  content     String        @db.Text
-  type        CommentType   @default(GENERAL)
-  status      CommentStatus @default(OPEN)
-  parentId    String?       // For threaded replies
-  anchor      Json?         // Yjs relative position anchor
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  resolvedAt  DateTime?
-  resolvedById String?
-
-  universe Universe  @relation(fields: [universeId], references: [id], onDelete: Cascade)
-  scene    Scene?    @relation(fields: [sceneId], references: [id], onDelete: Cascade)
-  author   User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
-  replies  Comment[] @relation("CommentReplies")
-}
-
-model Presence {
-  id         String   @id @default(cuid())
-  universeId String
-  userId     String
-  sceneId    String?
-  cursor     Json?    // {blockId, offset, selection}
-  color      String   // Assigned user color
-  lastSeen   DateTime @default(now()) @updatedAt
-  metadata   Json?    // viewport, device info
-
-  universe Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  scene    Scene?   @relation(fields: [sceneId], references: [id], onDelete: Cascade)
-
-  @@unique([universeId, userId, sceneId])
-}
-
-enum CommentType {
-  GENERAL
-  SUGGESTION
-  QUESTION
-}
-
-enum CommentStatus {
-  OPEN
-  RESOLVED
-  DISMISSED
-}
-
-enum ComparisonStatus {
-  PENDING
-  RUNNING
-  COMPLETED
-  FAILED
-  CANCELLED
-}
+} 
