@@ -4,6 +4,8 @@
 > **Created:** 2026-07-25
 > **Version:** 1.0
 
+> ⚠️ **Catatan (2026-08-02):** Dokumen ini mencakup roadmap platform teks (Phase 0-6). Untuk inisiatif AI Video Factory (generate video pendek dari karakter di Character Bible), roadmap selanjutnya mengikuti dua dokumen terpisah — **`REDESIGN-VIDEO-FACTORY.md`** (audit & arsitektur) dan **`IMPLEMENTATION-PLAN-VIDEO-FACTORY.md`** (task breakdown, penomoran phase **VF-1** s/d **VF-6** — sengaja beda prefix supaya tidak tertukar dengan Phase 5-6 di dokumen ini). Phase 5-6 di dokumen ini tetap berjalan independen untuk fitur platform teks (Semantic Search, Multi-model Comparison, Collaboration, Billing, dst).
+
 ---
 
 ## 1. Executive Summary
