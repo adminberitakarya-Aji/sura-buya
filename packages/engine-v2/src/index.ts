@@ -9,14 +9,17 @@
 export * from './commands.js';
 export * from './validate.js';
 export * from './generate.js';
+export * from './generate/index.js';
 export * from './context.js';
 export * from './prompt/template.js';
 export * from './bible/types.js';
 export * from './ai/providers.js';
+export * from './ai/embeddings.js';
 export * from './skills/base.js';
 export * from './skills/registry.js';
 export * from './plan/episode-planner.js';
 export * from './plan/season-planner.js';
+export * from './collaboration/index.js';
 
 // Explicitly re-export AI registry to avoid conflicts
 export {

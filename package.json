@@ -32,6 +32,7 @@
   "devDependencies": {
     "@suro-buya/config": "workspace:*",
     "husky": "^8.0.3",
+    "ignore-loader": "^0.1.2",
     "lint-staged": "^15.0.0",
     "typescript": "^5.3.0"
   },

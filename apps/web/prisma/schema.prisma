@@ -25,6 +25,8 @@ model User {
   reviews       Review[]
   ownedUniverses Universe[] @relation("UniverseOwner")
   generationJobs GenerationJob[] @relation("GenerationJobUser")
+  comments       Comment[]
+  presences      Presence[]
 }
 
 model Account {
@@ -90,6 +92,9 @@ model Universe {
   regions          Region[]         @relation("RegionUniverse")
   seasons          Season[]         @relation("SeasonUniverse")
   generationJobs   GenerationJob[]  @relation("GenerationJobUniverse")
+  comparisonSessions ComparisonSession[]
+  comments         Comment[]
+  presences        Presence[]
 }
 
 model UniverseMember {
@@ -233,6 +238,8 @@ model Scene {
   episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
   reviews Review[]
   versions SceneVersion[]
+  comments Comment[]
+  presences Presence[]
 
   @@unique([episodeId, sceneNumber])
 }
@@ -391,6 +398,104 @@ enum JobType {
 }
 
 enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model ComparisonSession {
+  id            String   @id @default(cuid())
+  universeId    String
+  name          String
+  prompt        String   @db.Text
+  promptVariants Json    // per-model prompt variants
+  status        ComparisonStatus @default(PENDING)
+  config        Json     // model configs, params
+  createdBy     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  completedAt   DateTime?
+  
+  universe      Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
+  results       ComparisonResult[]
+  winnerId      String?  @unique // references ComparisonResult.id
+  winner        ComparisonResult? @relation("WinnerResult", fields: [winnerId], references: [id])
+}
+
+model ComparisonResult {
+  id              String   @id @default(cuid())
+  sessionId       String
+  modelId         String   // provider:model format
+  modelName       String
+  provider        String
+  output          String   @db.Text
+  tokensUsed      Int
+  latencyMs       Int
+  costEstimate    Float
+  scores          Json     // {canon, quality, creativity, instruction, overall}
+  rank            Int?
+  error           String?  @db.Text
+  createdAt       DateTime @default(now())
+  
+  session         ComparisonSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  winningSession  ComparisonSession? @relation("WinnerResult")
+}
+
+model Comment {
+  id          String        @id @default(cuid())
+  universeId  String
+  sceneId     String?
+  blockId     String?       // For block-level comments
+  authorId    String
+  content     String        @db.Text
+  type        CommentType   @default(GENERAL)
+  status      CommentStatus @default(OPEN)
+  parentId    String?       // For threaded replies
+  anchor      Json?         // Yjs relative position anchor
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  resolvedAt  DateTime?
+  resolvedById String?
+
+  universe Universe  @relation(fields: [universeId], references: [id], onDelete: Cascade)
+  scene    Scene?    @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  author   User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  Comment[] @relation("CommentReplies")
+}
+
+model Presence {
+  id         String   @id @default(cuid())
+  universeId String
+  userId     String
+  sceneId    String?
+  cursor     Json?    // {blockId, offset, selection}
+  color      String   // Assigned user color
+  lastSeen   DateTime @default(now()) @updatedAt
+  metadata   Json?    // viewport, device info
+
+  universe Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scene    Scene?   @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+
+  @@unique([universeId, userId, sceneId])
+}
+
+enum CommentType {
+  GENERAL
+  SUGGESTION
+  QUESTION
+}
+
+enum CommentStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+enum ComparisonStatus {
   PENDING
   RUNNING
   COMPLETED

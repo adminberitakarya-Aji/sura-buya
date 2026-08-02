@@ -358,6 +358,22 @@ export const seasonsApi = {
     request<{ success: true }>(`/api/universes/${universeId}/seasons/${seasonId}`, {
       method: 'DELETE',
     }),
+
+  generatePlan: (universeId: string, seasonId: string, options?: {
+    episodeCount?: number;
+    targetRuntimeMinutes?: number;
+    arcType?: 'serialized' | 'episodic' | 'anthology' | 'hybrid';
+    themes?: string[];
+    focusCharacters?: string[];
+    tone?: string;
+  }) =>
+    request<{ job: any; plan?: any }>(`/api/universes/${universeId}/seasons/${seasonId}/plan`, {
+      method: 'POST',
+      body: JSON.stringify(options ?? {}),
+    }),
+
+  getPlan: (universeId: string, seasonId: string) =>
+    request<{ plan?: any }>(`/api/universes/${universeId}/seasons/${seasonId}/plan`),
 };
 
 // ---- Episodes ----

@@ -10,7 +10,7 @@ const nextConfig = {
   images: {
     domains: ['localhost', 'vercel.app'],
   },
-  webpack: (config) => {
+  webpack: (config, { isServer }) => {
     // Workspace packages (@suro-buya/engine-v2 in particular) are authored
     // as TypeScript ESM and internally import their own modules with an
     // explicit ".js" extension (e.g. `export * from './commands.js'`, which
@@ -24,6 +24,32 @@ const nextConfig = {
     config.resolve.extensionAlias = {
       '.js': ['.ts', '.tsx', '.js'],
     };
+
+    // Handle native binary modules from onnxruntime-node (via @xenova/transformers)
+    // These .node files cannot be processed by webpack, so we ignore them
+    config.module.rules.push({
+      test: /\.node$/,
+      use: 'ignore-loader',
+    });
+
+    // Exclude onnxruntime-node from client bundle
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        os: false,
+        crypto: false,
+      };
+      
+      // Don't bundle onnxruntime-node in client
+      config.externals = config.externals || [];
+      config.externals.push({
+        'onnxruntime-node': 'onnxruntime-node',
+        '@xenova/transformers': '@xenova/transformers',
+      });
+    }
+
     return config;
   },
 };
