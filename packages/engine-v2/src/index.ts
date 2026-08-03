@@ -14,12 +14,18 @@ export * from './context.js';
 export * from './prompt/template.js';
 export * from './bible/types.js';
 export * from './ai/providers.js';
-export * from './ai/embeddings.js';
 export * from './skills/base.js';
 export * from './skills/registry.js';
 export * from './plan/episode-planner.js';
 export * from './plan/season-planner.js';
-export * from './collaboration/index.js';
+
+// VF-1.2, VF-1.5 & VF-1.6 — Character (persona parsing + build + reference generator)
+export * from './character/persona-parser.js';
+export * from './character/character-builder.js';
+export * from './character/reference-generator.js';
+
+// VF-1.4 — Media provider skeleton (image/video/voice, fallback chain)
+export * from './ai/media-providers/index.js';
 
 // Explicitly re-export AI registry to avoid conflicts
 export {

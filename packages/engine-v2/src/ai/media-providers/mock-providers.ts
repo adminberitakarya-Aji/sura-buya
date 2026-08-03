@@ -24,72 +24,106 @@ import type {
 } from './types.js';
 import { MediaProviderError } from './types.js';
 
+export interface MockProviderOptions {
+    shouldFail?: boolean;
+    unavailable?: boolean;
+    latencyMs?: number;
+    costUsd?: number;
+}
+
+function parseOptions(options?: boolean | MockProviderOptions): MockProviderOptions {
+    if (typeof options === 'boolean') {
+        return { shouldFail: options };
+    }
+    return options ?? {};
+}
+
 export class MockImageProvider implements ImageProvider {
+    private readonly opts: MockProviderOptions;
+
     constructor(
         public readonly name: string,
-        private readonly shouldFail = false,
-    ) { }
+        options?: boolean | MockProviderOptions,
+    ) {
+        this.opts = parseOptions(options);
+    }
 
     async generateImage(request: ImageGenerationRequest): Promise<ImageGenerationResult> {
-        if (this.shouldFail) {
+        if (this.opts.latencyMs && this.opts.latencyMs > 0) {
+            await new Promise((res) => setTimeout(res, this.opts.latencyMs));
+        }
+        if (this.opts.shouldFail) {
             throw new MediaProviderError(`Mock provider ${this.name} sengaja disetel gagal`, this.name);
         }
         return {
             url: `https://mock-media.local/image/${this.name}/${encodeURIComponent(request.prompt).slice(0, 40)}.png`,
             providerName: this.name,
-            cost: 0.01,
+            cost: this.opts.costUsd ?? 0.01,
         };
     }
 
     async isAvailable(): Promise<boolean> {
-        return !this.shouldFail;
+        return !this.opts.unavailable;
     }
 }
 
 export class MockVideoProvider implements VideoProvider {
+    private readonly opts: MockProviderOptions;
+
     constructor(
         public readonly name: string,
-        private readonly shouldFail = false,
-    ) { }
+        options?: boolean | MockProviderOptions,
+    ) {
+        this.opts = parseOptions(options);
+    }
 
     async generateClip(request: VideoGenerationRequest): Promise<VideoGenerationResult> {
-        if (this.shouldFail) {
+        if (this.opts.latencyMs && this.opts.latencyMs > 0) {
+            await new Promise((res) => setTimeout(res, this.opts.latencyMs));
+        }
+        if (this.opts.shouldFail) {
             throw new MediaProviderError(`Mock provider ${this.name} sengaja disetel gagal`, this.name);
         }
         return {
             url: `https://mock-media.local/video/${this.name}/clip.mp4`,
             providerName: this.name,
             durationActual: request.duration,
-            cost: 0.05,
+            cost: this.opts.costUsd ?? 0.05,
         };
     }
 
     async isAvailable(): Promise<boolean> {
-        return !this.shouldFail;
+        return !this.opts.unavailable;
     }
 }
 
 export class MockVoiceProvider implements VoiceProvider {
+    private readonly opts: MockProviderOptions;
+
     constructor(
         public readonly name: string,
-        private readonly shouldFail = false,
-    ) { }
+        options?: boolean | MockProviderOptions,
+    ) {
+        this.opts = parseOptions(options);
+    }
 
     async synthesize(request: VoiceSynthesisRequest): Promise<VoiceSynthesisResult> {
-        if (this.shouldFail) {
+        if (this.opts.latencyMs && this.opts.latencyMs > 0) {
+            await new Promise((res) => setTimeout(res, this.opts.latencyMs));
+        }
+        if (this.opts.shouldFail) {
             throw new MediaProviderError(`Mock provider ${this.name} sengaja disetel gagal`, this.name);
         }
-        // Estimasi kasar durasi dari panjang teks — cukup untuk keperluan mock/test
         const estimatedDuration = Math.max(1, request.text.split(/\s+/).length / 2.5);
         return {
             url: `https://mock-media.local/voice/${this.name}/${request.voiceId}.mp3`,
             providerName: this.name,
             durationActual: estimatedDuration,
-            cost: 0.002,
+            cost: this.opts.costUsd ?? 0.002,
         };
     }
 
     async isAvailable(): Promise<boolean> {
-        return !this.shouldFail;
+        return !this.opts.unavailable;
     }
 }

@@ -124,10 +124,17 @@ export default function CharactersPage() {
             Kelola character bible dan voice guide untuk universe ini.
           </p>
         </div>
-        <Button onClick={openCreateDialog}>
-          <Plus className="h-4 w-4" />
-          Tambah Karakter
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Link href={`/${universeId}/characters/new`}>
+            <Button variant="default">
+              <Plus className="h-4 w-4 mr-1" />
+              Wizard Karakter Baru (AI 2-Step)
+            </Button>
+          </Link>
+          <Button variant="outline" onClick={openCreateDialog}>
+            Quick Add
+          </Button>
+        </div>
       </div>
 
       {isLoading && (

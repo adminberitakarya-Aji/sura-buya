@@ -25,6 +25,9 @@ model User {
   reviews       Review[]
   ownedUniverses Universe[] @relation("UniverseOwner")
   generationJobs GenerationJob[] @relation("GenerationJobUser")
+  comments       Comment[]        @relation("CommentAuthor")
+  presences      Presence[]
+  comparisonSessions ComparisonSession[] @relation("ComparisonSessionUser")
 }
 
 model Account {
@@ -100,6 +103,9 @@ model Universe {
   seasons          Season[]         @relation("SeasonUniverse")
   generationJobs   GenerationJob[]  @relation("GenerationJobUniverse")
   videoSeries      VideoSeries[]    // VF-1.3
+  comments         Comment[]
+  presences        Presence[]
+  comparisonSessions ComparisonSession[]
 }
 
 // VF-1.3 — lihat REDESIGN-VIDEO-FACTORY.md §2.3.1
@@ -450,4 +456,101 @@ enum JobStatus {
   COMPLETED
   FAILED
   CANCELLED
+}
+
+enum CommentType {
+  GENERAL
+  SUGGESTION
+  QUESTION
+}
+
+enum CommentStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+model Comment {
+  id           String        @id @default(cuid())
+  universeId   String
+  sceneId      String
+  blockId      String?
+  authorId     String
+  content      String        @db.Text
+  type         CommentType   @default(GENERAL)
+  status       CommentStatus @default(OPEN)
+  parentId     String?
+  anchor       Json?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  resolvedAt   DateTime?
+  resolvedById String?
+
+  author   User     @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  universe Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[] @relation("CommentReplies")
+}
+
+model Presence {
+  id         String   @id @default(cuid())
+  universeId String
+  userId     String
+  sceneId    String?
+  cursor     Json?
+  color      String
+  lastSeen   DateTime @default(now()) @updatedAt
+  metadata   Json?
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  universe Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
+
+  @@unique([universeId, userId, sceneId], name: "universeId_userId_sceneId")
+}
+
+enum ComparisonStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model ComparisonSession {
+  id             String           @id @default(cuid())
+  universeId     String
+  name           String
+  prompt         String           @db.Text
+  promptVariants Json             @default("{}")
+  status         ComparisonStatus @default(PENDING)
+  config         Json
+  winnerId       String?
+  createdBy      String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  completedAt    DateTime?
+
+  universe Universe           @relation(fields: [universeId], references: [id], onDelete: Cascade)
+  user     User               @relation("ComparisonSessionUser", fields: [createdBy], references: [id], onDelete: Cascade)
+  winner   ComparisonResult?  @relation("ComparisonWinner", fields: [winnerId], references: [id])
+  results  ComparisonResult[] @relation("SessionResults")
+}
+
+model ComparisonResult {
+  id           String   @id @default(cuid())
+  sessionId    String
+  modelId      String
+  modelName    String
+  provider     String
+  output       String   @db.Text
+  tokensUsed   Int      @default(0)
+  latencyMs    Int      @default(0)
+  costEstimate Float    @default(0)
+  scores       Json     @default("{}")
+  rank         Int?
+  error        String?  @db.Text
+  createdAt    DateTime @default(now())
+
+  session     ComparisonSession   @relation("SessionResults", fields: [sessionId], references: [id], onDelete: Cascade)
+  wonSessions ComparisonSession[] @relation("ComparisonWinner")
 } 

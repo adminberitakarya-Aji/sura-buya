@@ -5,7 +5,7 @@
  */
 
 import type { CommandResult, EngineConfig, SceneGenerationInput, EpisodeGenerationInput, GenerationContext, EngineStatus } from './types.js';
-import * as process from 'node:process';
+const proc = typeof process !== 'undefined' ? process : ({} as any);
 
 /**
  * Command handler type
@@ -151,7 +151,7 @@ export function getEngineStatus(loadedUniverses: string[], activeGenerations: nu
     ready: true,
     loadedUniverses,
     activeGenerations,
-    memoryUsage: process.memoryUsage().heapUsed / 1024 / 1024,
+    memoryUsage: proc.memoryUsage ? proc.memoryUsage().heapUsed / 1024 / 1024 : 0,
   };
 }
 

@@ -267,6 +267,9 @@ importers:
 
   packages/engine-v2:
     dependencies:
+      '@prisma/client':
+        specifier: ^5.10.0
+        version: 5.22.0(prisma@5.22.0)
       '@suro-buya/shared':
         specifier: workspace:*
         version: link:../shared

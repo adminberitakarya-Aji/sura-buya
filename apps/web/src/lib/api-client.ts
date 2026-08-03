@@ -68,6 +68,8 @@ export interface CreateCharacterInput {
   coreTraits?: string[];
   description?: string;
   voiceGuide?: string;
+  /** VF-1.8: menyimpan field PersonaDraft tanpa kolom Prisma langsung (species, ageDescriptor, dll.) */
+  metadata?: Record<string, unknown>;
 }
 
 // ---- Universes ----
@@ -310,9 +312,139 @@ export const charactersApi = {
     request<{ success: true }>(`/api/universes/${universeId}/characters/${characterId}`, {
       method: 'DELETE',
     }),
+
+  /**
+   * VF-1.8 — Parsing free-text menjadi PersonaDraft via AI (server-side).
+   * Endpoint ini meneruskan rawInput ke persona-parser.ts bersama
+   * audienceProfile dari konfigurasi universe, sehingga AI mendapat
+   * konteks audiens yang tepat tanpa perlu client tahu detail konfigurasi.
+   */
+  parsePersona: (
+    universeId: string,
+    rawInput: string,
+    audienceProfileOverride?: string,
+  ) =>
+    request<{
+      draft: PersonaDraft;
+      meta: { contentRating: string; audienceProfile: string | null; providerUsed: string };
+    }>(`/api/universes/${universeId}/characters/parse-persona`, {
+      method: 'POST',
+      body: JSON.stringify({ rawInput, audienceProfileOverride }),
+    }),
 };
 
-// ---- Seasons ----
+// ---- VF-1.8: CharacterAsset ----
+
+export interface VoiceProfile {
+  provider: string;
+  voiceId: string;
+  settings?: Record<string, unknown>;
+}
+
+export interface LoraConfig {
+  loraPath: string;
+  strength?: number;
+}
+
+export interface CharacterAsset {
+  id: string;
+  characterId: string; // FK ke Character.id
+  referenceImages: string[];
+  voiceProfile: VoiceProfile | null;
+  loraConfig: LoraConfig | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpsertCharacterAssetInput {
+  referenceImages?: string[];
+  voiceProfile?: VoiceProfile | null;
+  loraConfig?: LoraConfig | null;
+}
+
+export interface ReferenceGenerateInput {
+  /** Jumlah gambar 3–5. Default: 4 */
+  count?: number;
+  /** Gaya visual art style */
+  artStyle?: string;
+  /** Otomatis simpan ke CharacterAsset.referenceImages setelah generate. Default: true */
+  saveToAsset?: boolean;
+}
+
+export interface ReferenceGenerateResult {
+  characterId: string;
+  referenceImages: string[];
+  promptsUsed: Array<{ angle: string; prompt: string; description: string }>;
+  providerUsed: string;
+  totalCost: number;
+}
+
+/** PersonaDraft — sesuai @suro-buya/shared */
+export interface PersonaDraft {
+  draftId: string;
+  source: 'ai-parsed' | 'manual';
+  name: string;
+  displayName: string;
+  role: 'PROTAGONIST' | 'DEUTERAGONIST' | 'SUPPORTING' | 'ANTAGONIST' | 'NARRATOR';
+  species: string;
+  ageDescriptor: string;
+  description: string;
+  coreTraits: string[];
+  coreWeakness: string;
+  motivation?: string;
+  voiceGuide: string;
+  visualDescription: string;
+  fieldsNeedingReview: string[];
+  rawInput?: string;
+}
+
+export const characterAssetApi = {
+  /**
+   * GET CharacterAsset untuk karakter tertentu.
+   * Mengembalikan { asset: null } jika belum ada (bukan 404 error).
+   */
+  get: (universeId: string, characterId: string) =>
+    request<{
+      asset: CharacterAsset | null;
+      character: { id: string; characterId: string; displayName: string };
+    }>(`/api/universes/${universeId}/characters/${characterId}/asset`),
+
+  /**
+   * PUT (Upsert) CharacterAsset — buat atau perbarui.
+   * Dipakai di Step 3 wizard untuk menyimpan reference images yang sudah diapprove.
+   */
+  upsert: (universeId: string, characterId: string, input: UpsertCharacterAssetInput) =>
+    request<{ asset: CharacterAsset }>(
+      `/api/universes/${universeId}/characters/${characterId}/asset`,
+      { method: 'PUT', body: JSON.stringify(input) },
+    ),
+
+  /**
+   * DELETE CharacterAsset (menghapus lapisan visual/produksi, BUKAN Character-nya).
+   */
+  remove: (universeId: string, characterId: string) =>
+    request<{ success: true }>(
+      `/api/universes/${universeId}/characters/${characterId}/asset`,
+      { method: 'DELETE' },
+    ),
+
+  /**
+   * POST reference-generate — trigger VF-1.6 `generateCharacterReferenceImages()`
+   * dari sisi server. Hasil URL gambar dikembalikan ke client.
+   * Jika `saveToAsset=true` (default), URL juga disimpan ke CharacterAsset.referenceImages.
+   */
+  generateReferenceImages: (
+    universeId: string,
+    characterId: string,
+    input: ReferenceGenerateInput = {},
+  ) =>
+    request<{ result: ReferenceGenerateResult; savedToAsset: boolean }>(
+      `/api/universes/${universeId}/characters/${characterId}/asset/reference-generate`,
+      { method: 'POST', body: JSON.stringify(input) },
+    ),
+};
+
+
 
 export type SeasonStatus = 'PLANNING' | 'IN_PROGRESS' | 'COMPLETED' | 'ARCHIVED';
 
