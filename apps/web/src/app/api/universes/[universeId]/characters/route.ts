@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import type { Prisma } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+import type { CharacterCreateInput } from '@suro-buya/engine-v2';
 import { assertCan } from '@/lib/rbac';
 import { requireUserId, unauthorized, errorResponse } from '@/lib/api-helpers';
+import {
+  persistCharacter,
+  CharacterAlreadyExistsError,
+} from '@/lib/engine/character-persistence';
 
 const characterRoleEnum = z.enum([
   'PROTAGONIST',
@@ -43,6 +46,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
     await assertCan(userId, params.universeId, 'content:read');
 
+    const { prisma } = await import('@/lib/prisma');
     const characters = await prisma.character.findMany({
       where: { universeId: params.universeId },
       orderBy: { order: 'asc' },
@@ -52,6 +56,34 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   } catch (error) {
     return errorResponse(error);
   }
+}
+
+/**
+ * Petakan body route CRUD form-based (createCharacterSchema) ke
+ * CharacterCreateInput engine-v2. Route lama membolehkan metadata bebas;
+ * kita tahan field persona opsional dengan default kosong demi no-regression,
+ * sementara bibleRef/order diteruskan via extra ke bridge agar tersimpan.
+ */
+function toCharacterCreateInput(data: z.infer<typeof createCharacterSchema>): CharacterCreateInput {
+  const metadata = (data.metadata ?? {}) as Record<string, unknown>;
+  return {
+    characterId: data.characterId,
+    name: data.name,
+    role: data.role,
+    displayName: data.displayName,
+    description: data.description ?? data.name,
+    coreTraits: data.coreTraits,
+    coreWeakness: data.coreWeakness,
+    voiceGuide: data.voiceGuide ?? '',
+    metadata: {
+      species: typeof metadata.species === 'string' ? metadata.species : '',
+      ageDescriptor: typeof metadata.ageDescriptor === 'string' ? metadata.ageDescriptor : '',
+      motivation: typeof metadata.motivation === 'string' ? metadata.motivation : null,
+      visualDescription:
+        typeof metadata.visualDescription === 'string' ? metadata.visualDescription : '',
+      personaSource: metadata.personaSource === 'manual' ? 'manual' : 'ai-parsed',
+    },
+  };
 }
 
 /** POST /api/universes/:universeId/characters */
@@ -65,16 +97,21 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     const body = await req.json();
     const data = createCharacterSchema.parse(body);
 
-    const character = await prisma.character.create({
-      data: {
-        ...data,
-        metadata: data.metadata as Prisma.InputJsonValue | undefined,
-        universeId: params.universeId,
-      },
-    });
+    // Persist ATOMIK: Character + CharacterAsset (referenceImages kosong)
+    // dalam satu transaksi via bridge. CharacterAsset dibuat KOSONG duluan;
+    // reference-generator (VF-1.6) mengisinya lewat PUT /asset.
+    const character = await persistCharacter(
+      params.universeId,
+      toCharacterCreateInput(data),
+      { referenceImages: [], voiceProfile: null },
+      { bibleRef: data.bibleRef, order: data.order }
+    );
 
     return NextResponse.json({ character }, { status: 201 });
   } catch (error) {
+    if (error instanceof CharacterAlreadyExistsError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
     return errorResponse(error);
   }
 }

@@ -274,4 +274,4 @@ apps/video-worker/               →  BARU
 packages/video-renderer/         →  BARU
 ```
 
-Prinsip: tidak ada model atau modul lama yang diganti — `CharacterAsset` dan `VideoSeries` adalah lapisan tambahan di atas `Character`/`Episode`/`Season` yang sudah ada. 
+Prinsip: model dan modul lama tidak dihapus atau ditulis ulang dari nol — fondasi existing (`Character`, `CanonValidator`, `ContextBuilder`, RBAC, auth) dipertahankan dan diadaptasi non-breaking di mana struktur data baru (`CharacterAsset`, `VideoSeries`) atau alur baru (persona wizard, media pipeline) menuntutnya, sambil menjaga semantik canon. `CharacterAsset` dan `VideoSeries` adalah lapisan tambahan di atas `Character`/`Episode`/`Season` yang sudah ada.

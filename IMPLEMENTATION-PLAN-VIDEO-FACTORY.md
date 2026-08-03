@@ -5,7 +5,7 @@
 > **Version:** 2.1 (revisi: platform generik lintas audiens — Suro & Buya jadi salah satu contoh universe, bukan asumsi default; lihat `REDESIGN-VIDEO-FACTORY.md` Prinsip #4)
 > **Dokumen terkait:** `REDESIGN-VIDEO-FACTORY.md` (audit, arsitektur, keputusan tools)
 > **Penomoran phase:** Sengaja diberi prefix **VF-** (bukan "Phase 1..6" polos) supaya tidak bentrok dengan Phase 5-6 di `IMPLEMENTATION-PLAN.md` (platform teks) yang sedang berjalan.
-> **Prinsip migrasi:** Extend, don't rewrite. `Character`, `CanonValidator`, `ContextBuilder`, RBAC, auth — tidak diubah, hanya diperluas.
+> **Prinsip migrasi:** *Extend, don't replace.* Fondasi existing (`Character`, `CanonValidator`, `ContextBuilder`, RBAC, auth) tidak dihapus atau ditulis ulang dari nol — tetapi **diperluas/diadaptasi non-breaking** di mana pun struktur data baru (`CharacterAsset`, `VideoSeries`, `ContentRating`) atau alur baru (persona wizard, media pipeline) menuntutnya, sambil menjaga semantik canon yang sudah ada.
 
 ---
 
