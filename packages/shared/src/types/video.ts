@@ -23,6 +23,19 @@ export type CharacterRole =
     | 'NARRATOR';
 
 /**
+ * ContentRating — mirror TypeScript dari enum Prisma `ContentRating`
+ * (ALL_AGES | TEEN | MATURE) di apps/web/prisma/schema.prisma. Sengaja
+ * di-mirror sebagai union type biasa di @suro-buya/shared (bukan import
+ * dari Prisma) supaya engine-v2 tetap clean dari dependency Prisma —
+ * pola yang sama yang sudah dipakai untuk CharacterRole di atas.
+ *
+ * Dipakai oleh: script-generator.ts (VF-2.2), content-guideline-check.ts
+ * (VF-2.3), canon check video (VF-2.4). Tidak ada asumsi audiens default
+ * di level engine — setiap universe menentukan rating-nya sendiri.
+ */
+export type ContentRating = 'ALL_AGES' | 'TEEN' | 'MATURE';
+
+/**
  * Dari mana PersonaDraft ini berasal — menentukan apakah field-nya perlu
  * ditandai "perlu direview" di Step 2 wizard (lihat `fieldsNeedingReview`).
  */
@@ -125,6 +138,66 @@ export interface CharacterVisualProfile {
         voiceId: string;
         settings?: Record<string, unknown>;
     };
+}
+
+/**
+ * VideoCharacterContext — konteks karakter untuk Video Factory, dibangun
+ * dari field Character + CharacterAsset + Character.metadata yang ASLI
+ * (bukan CharacterProfile lama di types/index.ts yang punya struktur berbeda:
+ * archetype vs role, traits vs coreTraits, voice object vs voiceGuide string).
+ *
+ * Ini yang dipakai script-generator.ts (VF-2.2), canon check (VF-2.4),
+ * dan scene-breakdown.ts (VF-2.5) — BUKAN CharacterProfile.
+ *
+ * Bridge layer di apps/web yang bertanggung jawab memetakan
+ * Character (Prisma) + CharacterAsset (Prisma) → VideoCharacterContext
+ * saat memanggil engine-v2 — engine-v2 tidak pernah akses Prisma langsung
+ * (pola yang sudah ditegakkan sejak VF-1.1, lihat character-builder.ts).
+ */
+export interface VideoCharacterContext {
+    /** Character.id (Prisma primary key) */
+    id: string;
+
+    /** Slug internal, mis. "suro" — Character.characterId di Prisma */
+    characterId: string;
+
+    /** Nama tampilan lengkap — Character.displayName */
+    displayName: string;
+
+    /** Peran naratif — CharacterRole, BUKAN CharacterArchetype */
+    role: CharacterRole;
+
+    /** Deskripsi umum — Character.description */
+    description: string;
+
+    /** Sifat inti — Character.coreTraits, BUKAN CharacterProfile.traits */
+    coreTraits: string[];
+
+    /** Kelemahan/ketakutan utama — Character.coreWeakness (string, BUKAN array) */
+    coreWeakness: string;
+
+    /** Panduan cara bicara — Character.voiceGuide (string, BUKAN objek nested) */
+    voiceGuide: string;
+
+    /**
+     * Field dari Character.metadata (VF-1.5) — disimpan sebagai Json di
+     * Prisma, berisi field PersonaDraft yang tidak punya kolom Prisma langsung.
+     */
+    metadata: {
+        species: string;
+        ageDescriptor: string;
+        motivation: string | null;
+        visualDescription: string;
+        personaSource: 'ai-parsed' | 'manual';
+    };
+
+    /**
+     * Dari CharacterAsset — opsional, tidak semua karakter punya asset
+     * (hanya karakter yang sudah lewat Step 3 wizard VF-1.7). Reuse
+     * CharacterVisualProfile via Omit supaya tidak divergen kalau
+     * CharacterVisualProfile berubah di masa depan.
+     */
+    visualProfile?: Omit<CharacterVisualProfile, 'characterId'>;
 }
 
 /** Jenis media yang dihasilkan untuk satu shot */

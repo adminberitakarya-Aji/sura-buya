@@ -27,6 +27,17 @@ export * from './character/reference-generator.js';
 // VF-1.4 — Media provider skeleton (image/video/voice, fallback chain)
 export * from './ai/media-providers/index.js';
 
+// VF-2.3 — Script beat sheet + content guideline check
+export * from './script/beat-sheet.js';
+export * from './script/content-guideline-check.js';
+
+// VF-2.2 — Script generator (VideoCharacterContext + AIProvider)
+export * from './script/script-generator.js';
+
+// VF-2.5 — Storyboard (scene breakdown + prompt builder)
+export * from './storyboard/scene-breakdown.js';
+export * from './storyboard/prompt-builder.js';
+
 // Explicitly re-export AI registry to avoid conflicts
 export {
   ProviderRegistry,

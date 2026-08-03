@@ -103,6 +103,7 @@ model Universe {
   seasons          Season[]         @relation("SeasonUniverse")
   generationJobs   GenerationJob[]  @relation("GenerationJobUniverse")
   videoSeries      VideoSeries[]    // VF-1.3
+  videoProjects    VideoProject[]   // VF-2.1 — reverse relasi
   comments         Comment[]
   presences        Presence[]
   comparisonSessions ComparisonSession[]
@@ -113,6 +114,17 @@ enum ContentRating {
   ALL_AGES // aman untuk segala umur, termasuk anak-anak
   TEEN     // remaja ke atas
   MATURE   // dewasa — tema berat, boleh menegangkan/kompleks
+}
+
+// VF-2.1 — status siklus hidup VideoProject
+enum VideoStatus {
+  DRAFT           // baru dibuat, belum ada script
+  SCRIPTED        // script sudah digenerate (VF-2.2)
+  STORYBOARDED    // storyboard sudah digenerate (VF-2.5)
+  GENERATING      // visual/motion/audio sedang digenerate (VF-3/4)
+  RENDERED        // video final sudah di-compose (VF-4)
+  REVIEWED        // lolos canon + safety review (VF-5)
+  EXPORTED        // sudah di-export siap upload (VF-5)
 }
 
 model UniverseMember {
@@ -154,6 +166,7 @@ model Character {
 
   universe Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
   characterAsset CharacterAsset? // VF-1.3 — lapisan visual/produksi video, opsional (tidak semua karakter dipakai di video)
+  videoProjects  VideoProject[]  // VF-2.1 — reverse relasi
 
   @@unique([universeId, characterId])
 }
@@ -199,7 +212,38 @@ model VideoSeries {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  universe Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
+  universe      Universe       @relation(fields: [universeId], references: [id], onDelete: Cascade)
+  videoProjects VideoProject[] // VF-2.1 — reverse relasi
+}
+
+// VF-2.1 — VideoProject: satu video/episode (standalone atau bagian VideoSeries)
+// Lihat REDESIGN-VIDEO-FACTORY.md §2.3 untuk rasional lengkap.
+model VideoProject {
+  id           String      @id @default(cuid())
+  universeId   String
+  seriesId     String?              // null = video standalone, diisi = bagian dari VideoSeries
+  characterId  String               // karakter utama — FK ke Character.id
+  episodeOrder Int?                 // urutan dalam series, nullable (null untuk standalone)
+  title        String
+  script       String      @db.Text
+  storyboard   Json                 // ShotSpec[]
+  beatSheet    Json?                // struktur beat 15/30/60 detik (VF-2.3)
+  status       VideoStatus @default(DRAFT)
+  settings     Json                 // duration, platform targets, dll.
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  universe   Universe     @relation(fields: [universeId], references: [id], onDelete: Cascade)
+  series     VideoSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+  // onDelete: Restrict (eksplisit) — berbeda sengaja dari konvensi Cascade di seluruh
+  // schema lainnya karena video output punya biaya AI generation nyata, tidak boleh
+  // terhapus ikut Character. User harus hapus VideoProject secara eksplisit dulu.
+  character  Character    @relation(fields: [characterId], references: [id], onDelete: Restrict)
+
+  @@index([universeId])
+  // Cegah dua project klaim "episode 1" di series yang sama.
+  // Aman untuk standalone: Postgres tidak anggap NULL bentrok di unique constraint.
+  @@unique([seriesId, episodeOrder])
 }
 
 model Region {

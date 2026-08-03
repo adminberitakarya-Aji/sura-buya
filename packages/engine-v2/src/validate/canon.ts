@@ -20,6 +20,7 @@ import type {
 } from '../types.js';
 import { ProviderRegistry, AITask, createDefaultRegistryConfig, createProviderFactory } from '../ai/registry.js';
 import type { AIProvider, AIProviderOptions } from '../ai/providers.js';
+import type { VideoCharacterContext, ContentRating } from '@suro-buya/shared';
 
 // Extended types for canon validation (adding fields not in base types)
 interface ExtendedUniverseConfig extends UniverseConfig {
@@ -484,6 +485,299 @@ export class CanonValidator {
   setUseLLMJudge(enabled: boolean): void {
     this.useLLMJudge = enabled && !!this.llmJudge;
   }
+
+  // ============================================================
+  // VF-2.4 — Video script canon check
+  // Extend (bukan rewrite) — method baru untuk naskah video,
+  // pakai VideoCharacterContext (VF-2.0), BUKAN CharacterProfile lama.
+  // ============================================================
+
+  /**
+   * Validate video script against canon.
+   *
+   * Cek: (a) naskah konsisten dengan persona VideoCharacterContext
+   *      (b) kalau series, konsisten dengan episode sebelumnya
+   *
+   * Acceptance criteria: "Naskah yang melanggar persona karakter
+   * (karakter penakut tiba-tiba ditulis sangat pemberani tanpa alasan)
+   * berhasil di-flag oleh canon check sebelum lanjut ke storyboard"
+   */
+  async validateVideoScript(
+    script: string,
+    context: VideoCanonContext,
+    options: ValidationOptions = {}
+  ): Promise<CanonValidationResult> {
+    const allViolations: ValidationViolation[] = [];
+    const errors: CanonValidationResult['errors'] = [];
+    const warnings: CanonValidationResult['warnings'] = [];
+    const infos: CanonValidationResult['infos'] = [];
+
+    // 1. Run video-specific deterministic rules
+    const videoViolations = runVideoCanonRules(script, context);
+    allViolations.push(...videoViolations);
+
+    // 2. Run LLM judge if enabled (semantic analysis)
+    let judgeResult: JudgeResult | undefined;
+    if (this.useLLMJudge && this.llmJudge && options.enableLLMJudge !== false) {
+      judgeResult = await this.judgeVideoScript(script, context);
+      for (const v of judgeResult.violations) {
+        allViolations.push({
+          rule: `llm-judge:${v.criterion}`,
+          severity: v.severity,
+          location: v.location,
+          expected: v.expected,
+          actual: v.actual,
+          suggestion: v.suggestion,
+        });
+      }
+    }
+
+    // 3. Categorize violations
+    for (const violation of allViolations) {
+      const categorized = {
+        path: violation.location,
+        message: `${violation.rule}: Expected ${JSON.stringify(violation.expected)}, got ${JSON.stringify(violation.actual)}`,
+        code: violation.rule,
+      };
+      switch (violation.severity) {
+        case 'error': errors.push(categorized); break;
+        case 'warning': warnings.push(categorized); break;
+        case 'info': infos.push(categorized); break;
+      }
+    }
+
+    const consistencyScore = this.calculateConsistencyScore(allViolations, judgeResult);
+
+    return {
+      valid: errors.length === 0,
+      consistencyScore,
+      violations: allViolations,
+      errors,
+      warnings,
+      infos,
+    };
+  }
+
+  /**
+   * LLM judge for video script — semantic analysis of persona consistency.
+   */
+  private async judgeVideoScript(
+    script: string,
+    context: VideoCanonContext
+  ): Promise<JudgeResult> {
+    if (!this.llmJudge) {
+      return { scores: {}, violations: [], overallScore: 1, summary: 'No LLM judge available' };
+    }
+
+    const char = context.character;
+    const prompt = `NASKAH VIDEO:
+---
+${script}
+---
+
+KARAKTER:
+- Nama: ${char.displayName}
+- Peran: ${char.role}
+- Sifat inti: ${char.coreTraits.join(', ')}
+- Kelemahan utama: ${char.coreWeakness}
+- Cara bicara: ${char.voiceGuide}
+- Motivasi: ${char.metadata.motivation ?? 'Tidak spesifik'}
+
+${context.seriesContext ? `EPISODE SEBELUMNYA:\n${context.seriesContext.previousEpisodeSummaries.join('\n')}` : 'Standalone video (bukan series).'}
+
+Evaluasi naskah terhadap karakter di atas untuk kriteria berikut:
+- characterConsistency: Karakter bertindak dan bicara konsisten dengan sifat inti dan kelemahan utama
+- voiceConsistency: Dialog karakter sesuai dengan cara bicara yang ditetapkan
+- storyContinuity: ${context.seriesContext ? 'Naskah konsisten dengan episode sebelumnya' : 'N/A (standalone)'}
+
+Return JSON: { "scores": {...}, "violations": [...], "overallScore": 0-1, "summary": "..." }`;
+
+    const options: AIProviderOptions = {
+      ...this.llmJudge['providerOptions'],
+      model: this.llmJudge['providerOptions'].model || 'claude-3-5-sonnet-20241022',
+      temperature: 0.1,
+      maxTokens: 2000,
+      systemPrompt: `You are a canon consistency judge for video scripts. Evaluate against character persona. Be strict but fair. Return only valid JSON.`,
+    };
+
+    const response = await this.llmJudge['provider'].generate(prompt, options);
+    return this.parseVideoJudgeResponse(response.content);
+  }
+
+  /**
+   * Parse LLM judge response for video script.
+   */
+  private parseVideoJudgeResponse(content: string): JudgeResult {
+    try {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('No JSON found');
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        scores: parsed.scores || {},
+        violations: parsed.violations || [],
+        overallScore: parsed.overallScore || 0,
+        summary: parsed.summary || 'No summary provided',
+      };
+    } catch (error) {
+      return {
+        scores: {},
+        violations: [{
+          criterion: 'parsing',
+          severity: 'error',
+          location: 'llm-judge-response',
+          expected: 'valid JSON',
+          actual: content.substring(0, 200),
+        }],
+        overallScore: 0,
+        summary: `Failed to parse judge response: ${(error as Error).message}`,
+      };
+    }
+  }
+}
+
+// ============================================================
+// VF-2.4 — Video canon context & rules
+// ============================================================
+
+/**
+ * Konteks untuk canon check naskah video.
+ * Pakai VideoCharacterContext (VF-2.0), BUKAN CharacterProfile lama.
+ */
+export interface VideoCanonContext {
+  /** Karakter utama — VideoCharacterContext (VF-2.0) */
+  character: VideoCharacterContext;
+
+  /** Rating universe pemanggil */
+  contentRating: ContentRating;
+
+  /** Profil audiens bebas teks */
+  audienceProfile?: string;
+
+  /** Konteks series — opsional, hanya kalau bagian VideoSeries */
+  seriesContext?: {
+    seriesId: string;
+    episodeOrder: number;
+    previousEpisodeSummaries: string[];
+  };
+}
+
+/**
+ * Run video-specific deterministic canon rules.
+ * These are separate from the existing RuleEngine rules (which use
+ * ValidationContext with CharacterProfile) — video rules use
+ * VideoCanonContext with VideoCharacterContext directly.
+ */
+function runVideoCanonRules(script: string, context: VideoCanonContext): ValidationViolation[] {
+  const violations: ValidationViolation[] = [];
+  const char = context.character;
+  const scriptLower = script.toLowerCase();
+
+  // Rule 1: Character name consistency — character name should appear in script
+  if (!scriptLower.includes(char.displayName.toLowerCase()) &&
+      !scriptLower.includes(char.characterId.toLowerCase())) {
+    violations.push({
+      rule: 'video-character-name-presence',
+      severity: 'warning',
+      location: 'script',
+      expected: `character name "${char.displayName}" or "${char.characterId}" to appear in script`,
+      actual: 'character name not found in script',
+      suggestion: `Pastikan karakter "${char.displayName}" muncul di naskah`,
+    });
+  }
+
+  // Rule 2: Core weakness contradiction — if character has a weakness,
+  // check if the script directly contradicts it without explanation
+  // Example: "penakut" (fearful) but script says "sangat pemberani" (very brave)
+  if (char.coreWeakness) {
+    const weaknessLower = char.coreWeakness.toLowerCase();
+
+    // Extract key concept from weakness (e.g., "takut" from "Takut pada gelap")
+    const weaknessKeywords = weaknessLower.split(/\s+/).filter((w: string) => w.length > 3).slice(0, 3);
+
+    // Check for direct antonyms/contradictions
+    const contradictionPatterns: Record<string, string[]> = {
+      'takut': ['sangat pemberani', 'tidak takut sama sekali', 'tanpa rasa takut', 'berani sekali', 'pemberani tanpa'],
+      'penakut': ['sangat pemberani', 'tidak takut sama sekali', 'tanpa rasa takut', 'berani sekali', 'pemberani tanpa'],
+      'lemah': ['sangat kuat', 'paling kuat', 'kekuatan luar biasa'],
+      'pemalu': ['sangat percaya diri', 'tanpa rasa malu', 'berani tampil'],
+      'ragu': ['sangat yakin', 'tanpa keraguan', 'pasti sekali'],
+    };
+
+    for (const keyword of weaknessKeywords) {
+      const patterns = contradictionPatterns[keyword];
+      if (patterns) {
+        for (const pattern of patterns) {
+          if (scriptLower.includes(pattern.toLowerCase())) {
+            violations.push({
+              rule: 'video-persona-weakness-contradiction',
+              severity: 'error',
+              location: `script: "${pattern}"`,
+              expected: `karakter dengan kelemahan "${char.coreWeakness}" tidak tiba-tiba menjadi kebalikannya tanpa alasan`,
+              actual: `naskah menggambarkan karakter sebagai "${pattern}" yang kontradiksi dengan kelemahan utama`,
+              suggestion: `Berikan alasan/arc karakter yang menjelaskan perubahan ini, atau ubah agar konsisten dengan kelemahan "${char.coreWeakness}"`,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // Rule 3: Core traits consistency — check if script directly contradicts core traits
+  for (const trait of char.coreTraits) {
+    const traitLower = trait.toLowerCase();
+
+    // Map traits to their antonyms
+    const traitContradictions: Record<string, string[]> = {
+      'pemberani': ['penakut sekali', 'tidak berani sama sekali', 'lari ketakutan', 'menyerah karena takut'],
+      'ingin tahu': ['tidak peduli sama sekali', 'acuh tak acuh', 'tidak tertarik'],
+      'setia kawan': ['mengkhianati teman', 'meninggalkan teman', 'berkhianat'],
+      'jujur': ['berbohong', 'berdusta', 'menipu'],
+      'rajin': ['malas sekali', 'tidak mau bekerja'],
+      'cerdas': ['bodoh sekali', 'tidak pintar sama sekali'],
+      'pemalu': ['sangat pemberani', 'berani sekali'],
+      'penakut': ['sangat pemberani', 'berani sekali', 'tanpa rasa takut'],
+    };
+
+    const patterns = traitContradictions[traitLower];
+    if (patterns) {
+      for (const pattern of patterns) {
+        if (scriptLower.includes(pattern.toLowerCase())) {
+          violations.push({
+            rule: 'video-persona-trait-contradiction',
+            severity: 'error',
+            location: `script: "${pattern}"`,
+            expected: `karakter dengan sifat "${trait}" tidak boleh digambarkan sebagai kebalikannya tanpa alasan`,
+            actual: `naskah menggambarkan karakter dengan "${pattern}" yang kontradiksi dengan sifat inti "${trait}"`,
+            suggestion: `Berikan alasan/arc karakter yang menjelaskan perilaku ini, atau ubah agar konsisten dengan sifat "${trait}"`,
+          });
+        }
+      }
+    }
+  }
+
+  // Rule 4: Series continuity — if part of series, check for obvious contradictions
+  if (context.seriesContext && context.seriesContext.previousEpisodeSummaries.length > 0) {
+    // Check if script references events from previous episodes
+    // (This is a light heuristic check — LLM judge does deeper semantic analysis)
+    const hasContinuityReference = context.seriesContext.previousEpisodeSummaries.some(summary => {
+      // Extract key nouns from summary and check if any appear in script
+      const nouns = summary.toLowerCase().split(/\s+/).filter((w: string) => w.length > 5).slice(0, 5);
+      return nouns.some(noun => scriptLower.includes(noun));
+    });
+
+    if (!hasContinuityReference && context.seriesContext.episodeOrder > 1) {
+      violations.push({
+        rule: 'video-series-continuity-reference',
+        severity: 'info',
+        location: 'script',
+        expected: 'naskah episode 2+ sebaiknya merujuk event dari episode sebelumnya',
+        actual: 'tidak ditemukan referensi ke event episode sebelumnya',
+        suggestion: 'Pertimbangkan menambahkan referensi ke event di episode sebelumnya untuk continuity',
+      });
+    }
+  }
+
+  return violations;
 }
 
 /**

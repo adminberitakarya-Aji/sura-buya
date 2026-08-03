@@ -813,6 +813,136 @@ export const reviewsApi = {
     ),
 };
 
+// ---- VF-2.6: Video Series ----
+
+export interface VideoSeries {
+  id: string;
+  universeId: string;
+  title: string;
+  characterIds: string[];
+  createdAt: string;
+  updatedAt: string;
+  _count?: { videoProjects: number };
+}
+
+export interface CreateSeriesInput {
+  title: string;
+  characterIds: string[];
+}
+
+export const seriesApi = {
+  list: (universeId: string) =>
+    request<{ series: VideoSeries[] }>(`/api/universes/${universeId}/series`),
+
+  get: (universeId: string, seriesId: string) =>
+    request<{ series: VideoSeries & { videoProjects: any[] } }>(
+      `/api/universes/${universeId}/series/${seriesId}`,
+    ),
+
+  create: (universeId: string, input: CreateSeriesInput) =>
+    request<{ series: VideoSeries }>(`/api/universes/${universeId}/series`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  remove: (universeId: string, seriesId: string) =>
+    request<{ success: true }>(`/api/universes/${universeId}/series/${seriesId}`, {
+      method: 'DELETE',
+    }),
+};
+
+// ---- VF-2.6: Video Studio (VideoProject) ----
+
+export type VideoStatus = 'DRAFT' | 'SCRIPTED' | 'STORYBOARDED' | 'GENERATING' | 'RENDERED' | 'REVIEWED' | 'EXPORTED';
+
+export interface VideoProject {
+  id: string;
+  universeId: string;
+  seriesId: string | null;
+  characterId: string;
+  episodeOrder: number | null;
+  title: string;
+  script: string;
+  storyboard: any[];
+  beatSheet: any | null;
+  status: VideoStatus;
+  settings: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+  character?: { id: string; displayName: string; characterId: string; role?: string };
+  series?: { id: string; title: string } | null;
+}
+
+export interface CreateProjectInput {
+  characterId: string;
+  seriesId?: string;
+  episodeOrder?: number;
+  title: string;
+  targetDuration?: 15 | 30 | 60;
+}
+
+export interface GenerateScriptInput {
+  storyIdea: string;
+}
+
+export interface GenerateScriptResult {
+  project: VideoProject;
+  script: string;
+  title: string;
+  estimatedDuration: number;
+  beatCount: number;
+  beatSheet: any;
+  metadata: { providerUsed: string; tokensUsed: number; modelUsed: string };
+}
+
+export interface GenerateStoryboardResult {
+  project: VideoProject;
+  shots: any[];
+  totalShots: number;
+  totalDuration: number;
+  beatsCovered: number;
+  warnings: string[];
+}
+
+export const studioApi = {
+  listProjects: (universeId: string) =>
+    request<{ projects: VideoProject[] }>(`/api/universes/${universeId}/studio`),
+
+  getProject: (universeId: string, projectId: string) =>
+    request<{ project: VideoProject }>(
+      `/api/universes/${universeId}/studio/${projectId}`,
+    ),
+
+  createProject: (universeId: string, input: CreateProjectInput) =>
+    request<{ project: VideoProject }>(`/api/universes/${universeId}/studio`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+
+  updateProject: (universeId: string, projectId: string, input: Partial<VideoProject>) =>
+    request<{ project: VideoProject }>(
+      `/api/universes/${universeId}/studio/${projectId}`,
+      { method: 'PATCH', body: JSON.stringify(input) },
+    ),
+
+  removeProject: (universeId: string, projectId: string) =>
+    request<{ success: true }>(`/api/universes/${universeId}/studio/${projectId}`, {
+      method: 'DELETE',
+    }),
+
+  generateScript: (universeId: string, projectId: string, input: GenerateScriptInput) =>
+    request<GenerateScriptResult>(
+      `/api/universes/${universeId}/studio/${projectId}/script`,
+      { method: 'POST', body: JSON.stringify(input) },
+    ),
+
+  generateStoryboard: (universeId: string, projectId: string) =>
+    request<GenerateStoryboardResult>(
+      `/api/universes/${universeId}/studio/${projectId}/storyboard`,
+      { method: 'POST' },
+    ),
+};
+
 // ---- Scene generation (SSE) ----
 
 export interface GenerateSceneOptions {
