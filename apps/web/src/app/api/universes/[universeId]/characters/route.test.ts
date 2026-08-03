@@ -91,6 +91,42 @@ describe('/api/universes/[universeId]/characters', () => {
     expect(json.character.characterId).toBe('suro');
   });
 
+  it('POST creates CharacterAsset atomically (nested create)', async () => {
+    assertCanMock.mockResolvedValue('EDITOR');
+    createMock.mockResolvedValue({ id: 'c1', ...validCharacter });
+
+    await POST(makePostRequest(validCharacter), params);
+
+    // Verifikasi bahwa prisma.character.create dipanggil dengan data
+    // yang menyertakan nested characterAsset.create (atomic 1:1)
+    expect(createMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          characterId: 'suro',
+          characterAsset: expect.objectContaining({
+            create: expect.objectContaining({
+              referenceImages: [],
+            }),
+          }),
+        }),
+      })
+    );
+  });
+
+  it('POST returns 409 when characterId already exists (P2002)', async () => {
+    assertCanMock.mockResolvedValue('EDITOR');
+    const prismaError = Object.assign(new Error('Unique constraint failed'), {
+      code: 'P2002',
+    });
+    createMock.mockRejectedValue(prismaError);
+
+    const res = await POST(makePostRequest(validCharacter), params);
+    const json = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(json.error).toContain('sudah ada');
+  });
+
   it('POST returns 403 for VIEWER role', async () => {
     const { ForbiddenError } = await import('@/lib/rbac');
     assertCanMock.mockRejectedValue(new ForbiddenError());
