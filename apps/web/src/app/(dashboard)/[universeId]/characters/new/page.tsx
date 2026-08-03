@@ -132,7 +132,9 @@ export default function CreateCharacterWizardPage() {
     try {
       const input = buildCharacterCreateInput(draft);
 
-      // 1. Buat Character (Bible entry) — reuse existing route
+      // Buat Character (Bible entry) + CharacterAsset kosong secara ATOMIK lewat
+      // nested create di backend (POST /characters). referenceImages diisi nanti
+      // di Step 3 via PUT /asset (generateReferenceImages).
       const created = await charactersApi.create(universeId, {
         characterId: input.characterId,
         name: input.characterId,
@@ -147,9 +149,6 @@ export default function CreateCharacterWizardPage() {
       });
 
       const charDbId = created.character.id;
-
-      // 2. Inisialisasi CharacterAsset kosong via VF-1.8 endpoint (referenceImages diisi di Step 3)
-      await characterAssetApi.upsert(universeId, charDbId, { referenceImages: [] });
 
       setSavedCharacterId(created.character.characterId);
       setSavedCharacterDbId(charDbId);
