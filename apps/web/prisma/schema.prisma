@@ -239,11 +239,59 @@ model VideoProject {
   // schema lainnya karena video output punya biaya AI generation nyata, tidak boleh
   // terhapus ikut Character. User harus hapus VideoProject secara eksplisit dulu.
   character  Character    @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  mediaAssets MediaAsset[] // VF-3.6 — reverse relasi
 
   @@index([universeId])
   // Cegah dua project klaim "episode 1" di series yang sama.
   // Aman untuk standalone: Postgres tidak anggap NULL bentrok di unique constraint.
   @@unique([seriesId, episodeOrder])
+}
+
+// ============================================================
+// VF-3.6 — AI Video Factory: MediaAsset (per-shot media tracking)
+// Mirror dari MediaJob type di @suro-buya/shared (VF-1.1).
+// Setiap shot dalam storyboard bisa punya beberapa MediaAsset
+// (image keyframe, video clip, audio — lihat MediaAssetType).
+// Cost tracking per asset untuk unit economics visibility
+// (lihat REDESIGN-VIDEO-FACTORY.md §10 Risk & Mitigation:
+// "Cost membengkak di volume tinggi" → "Cost tracking per MediaAsset").
+// ============================================================
+
+model MediaAsset {
+  id              String         @id @default(cuid())
+  projectId       String
+  shotIndex       Int                          // index shot dalam storyboard (ShotSpec.index)
+  type            MediaAssetType
+  status          MediaJobStatus @default(PENDING)
+  providerUsed    String?                      // nama provider yang SEDANG dipakai, mis. "kling-3.0" — berubah kalau fallback chain aktif
+  providerAttempts String[]                     // urutan fallback yang sudah dicoba, mis. ["kling-3.0", "seedance-2"]
+  retryCount      Int            @default(0)   // retry count untuk attempt SAAT INI (provider yang sedang aktif)
+  resultUrl       String?                      // URL asset hasil generate, terisi setelah status === DONE
+  cost            Float?                       // biaya generate ini dalam USD
+  lastError       String?        @db.Text       // pesan error terakhir, kalau status === FAILED
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  project VideoProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([projectId, shotIndex])
+}
+
+// VF-3.6 — jenis media yang dihasilkan untuk satu shot
+enum MediaAssetType {
+  IMAGE       // keyframe image dari ImageProvider (VF-3.1)
+  VIDEO_CLIP  // image-to-video dari VideoProvider (VF-3.3)
+  AUDIO       // TTS/SFX/music dari VoiceProvider (VF-4.1)
+}
+
+// VF-3.6 — status siklus hidup satu MediaJob (mirror MediaJobStatus di @suro-buya/shared)
+enum MediaJobStatus {
+  PENDING     // job dibuat, belum mulai
+  GENERATING  // sedang diproses provider
+  DONE        // selesai, resultUrl terisi
+  FAILED      // gagal setelah seluruh fallback chain habis
+  RETRYING    // retry dalam progress (provider sama, attempt baru)
 }
 
 model Region {

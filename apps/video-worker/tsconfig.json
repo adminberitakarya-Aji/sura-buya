@@ -1,0 +1,26 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "tsBuildInfoFile": "dist/tsbuildinfo",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "types": ["node"],
+    "esModuleInterop": true,
+    "paths": {
+      "@suro-buya/shared": ["../../packages/shared/src"],
+      "@suro-buya/engine-v2": ["../../packages/engine-v2/src"],
+      "@suro-buya/config": ["../../packages/config/src"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "dist/**/*", "tests"],
+  "references": [
+    { "path": "../../packages/shared" },
+    { "path": "../../packages/engine-v2" }
+  ]
+}

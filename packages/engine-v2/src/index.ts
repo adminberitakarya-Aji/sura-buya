@@ -38,6 +38,14 @@ export * from './script/script-generator.js';
 export * from './storyboard/scene-breakdown.js';
 export * from './storyboard/prompt-builder.js';
 
+// VF-3.2 — Visual (per-shot keyframe generation + style guide enforcer)
+export * from './visual/style-guide-enforcer.js';
+export * from './visual/image-generator.js';
+
+// VF-3.4 — Motion (image-to-video per shot + camera motion presets)
+export * from './motion/camera-motion.js';
+export * from './motion/animation-generator.js';
+
 // Explicitly re-export AI registry to avoid conflicts
 export {
   ProviderRegistry,

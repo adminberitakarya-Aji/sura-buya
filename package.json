@@ -16,6 +16,8 @@
     "build:templates": "pnpm --filter @suro-buya/templates build",
     "build:cli": "pnpm --filter @suro-buya/cli build",
     "build:web": "pnpm --filter @suro-buya/web build",
+    "build:video-worker": "pnpm --filter @suro-buya/video-worker build",
+    "dev:video-worker": "pnpm --filter @suro-buya/video-worker dev",
     "generate": "pnpm --filter @suro-buya/engine-v2 generate",
     "validate": "pnpm --filter @suro-buya/engine-v2 validate",
     "test": "pnpm -r test",

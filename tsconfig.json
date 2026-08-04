@@ -34,6 +34,7 @@
     { "path": "packages/templates/universe" },
     { "path": "packages/cli" },
     { "path": "apps/cli" },
-    { "path": "apps/web" }
+    { "path": "apps/web" },
+    { "path": "apps/video-worker" }
   ]
 }
