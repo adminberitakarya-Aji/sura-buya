@@ -28,7 +28,7 @@ export async function createJob(data: CreateJobInput): Promise<GenerationJob> {
       universeId: data.universeId,
       userId: data.userId,
       type: data.type,
-      input: data.input as Prisma.InputJsonValue,
+      input: data.input as any,
       status: 'PENDING',
     },
   });
@@ -67,7 +67,7 @@ export async function completeJob(
     data: {
       status: 'COMPLETED',
       progress: 100,
-      output: output as Prisma.InputJsonValue,
+      output: output as any,
       completedAt: new Date(),
     },
   });

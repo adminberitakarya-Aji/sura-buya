@@ -46,6 +46,15 @@ export * from './visual/image-generator.js';
 export * from './motion/camera-motion.js';
 export * from './motion/animation-generator.js';
 
+// VF-4.3 — Audio (voiceover generator + SFX/music selector)
+export * from './audio/voiceover-generator.js';
+export * from './audio/sfx-selector.js';
+export * from './audio/music-selector.js';
+
+// VF-4.5 — Compose (timeline builder + platform preset)
+export * from './compose/platform-preset.js';
+export * from './compose/timeline-builder.js';
+
 // Explicitly re-export AI registry to avoid conflicts
 export {
   ProviderRegistry,

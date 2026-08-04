@@ -75,7 +75,7 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
           where: { id: scene.id },
           data: {
             status: 'VALIDATED',
-            validationReport: validation as unknown as Prisma.InputJsonValue,
+            validationReport: validation as unknown as any,
           },
         });
 

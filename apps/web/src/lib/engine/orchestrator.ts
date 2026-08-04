@@ -87,7 +87,7 @@ export async function buildProviderRegistryForUniverse(
       registeredProviders.add(providerName);
     }
 
-    const engineTask = DB_TASK_TO_ENGINE_TASK[config.task];
+    const engineTask = DB_TASK_TO_ENGINE_TASK[config.task as keyof typeof DB_TASK_TO_ENGINE_TASK];
     const parameters = (config.parameters as Record<string, unknown>) ?? {};
 
     tasks.push({

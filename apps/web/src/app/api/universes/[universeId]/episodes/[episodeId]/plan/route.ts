@@ -62,7 +62,7 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
         await report(90, 'Menyimpan rencana episode');
         await prisma.episode.update({
           where: { id: params.episodeId },
-          data: { plan: plan as unknown as Prisma.InputJsonValue },
+          data: { plan: plan as unknown as any },
         });
 
         return { plan };
@@ -127,7 +127,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
     const updated = await prisma.episode.update({
       where: { id: episode.id },
-      data: { plan: updatedPlan as unknown as Prisma.InputJsonValue },
+      data: { plan: updatedPlan as unknown as any },
     });
 
     return NextResponse.json({ plan: updated.plan });

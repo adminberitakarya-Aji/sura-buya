@@ -5,6 +5,7 @@
  * Script tab: input story idea → generate script via AI
  * Storyboard tab: generate shot list from script
  * Generate tab (VF-3.7): link to generate page for visual/motion generation
+ * Export tab (VF-4.7): link to export page for video composition & export
  */
 
 'use client';
@@ -14,7 +15,7 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import Link from 'next/link';
 import { studioApi } from '@/lib/api-client';
-import { FileText, LayoutGrid, Sparkles, AlertCircle, Wand2 } from 'lucide-react';
+import { FileText, LayoutGrid, Sparkles, AlertCircle, Wand2, Download } from 'lucide-react';
 
 export default function ProjectWorkspacePage() {
   const params = useParams();
@@ -22,7 +23,7 @@ export default function ProjectWorkspacePage() {
   const projectId = params.projectId as string;
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<'script' | 'storyboard' | 'generate'>('script');
+  const [activeTab, setActiveTab] = useState<'script' | 'storyboard' | 'generate' | 'export'>('script');
   const [storyIdea, setStoryIdea] = useState('');
 
   const { data, isLoading } = useQuery({
@@ -110,6 +111,15 @@ export default function ProjectWorkspacePage() {
         >
           <Wand2 className="h-4 w-4" />
           Generate
+        </button>
+        <button
+          onClick={() => setActiveTab('export')}
+          className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 ${
+            activeTab === 'export' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'
+          }`}
+        >
+          <Download className="h-4 w-4" />
+          Export
         </button>
       </div>
 
@@ -232,6 +242,36 @@ export default function ProjectWorkspacePage() {
                 >
                   <Wand2 className="h-4 w-4" />
                   Open Generate Page
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Export Tab (VF-4.7) */}
+      {activeTab === 'export' && (
+        <div className="space-y-4">
+          {!hasStoryboard ? (
+            <div className="rounded-md bg-yellow-50 p-4 text-sm text-yellow-700 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              Generate storyboard terlebih dahulu sebelum export.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="rounded-lg border p-6 text-center">
+                <Download className="h-8 w-8 mx-auto text-primary mb-3" />
+                <h3 className="font-semibold mb-2">Export & Preview</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Compose video final from all shots, voiceovers, SFX, and BGM.
+                  Export to TikTok, YouTube Shorts, or Instagram Reels format.
+                </p>
+                <Link
+                  href={`/${universeId}/studio/${projectId}/export`}
+                  className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                >
+                  <Download className="h-4 w-4" />
+                  Open Export Page
                 </Link>
               </div>
             </div>

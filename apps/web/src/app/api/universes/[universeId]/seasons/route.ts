@@ -52,7 +52,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       data: {
         ...data,
         universeId: params.universeId,
-      } satisfies Prisma.SeasonUncheckedCreateInput,
+      } satisfies any,
     });
 
     return NextResponse.json({ season }, { status: 201 });

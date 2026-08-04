@@ -122,7 +122,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   ]);
 
   return NextResponse.json({
-    sessions: sessions.map(s => ({
+    sessions: sessions.map((s: any) => ({
       ...s,
       config: s.config as Record<string, unknown>,
       promptVariants: s.promptVariants as Record<string, string>,
@@ -232,7 +232,7 @@ async function runComparisonAsync(
     const results = await orchestrator.runComparison(config, options);
 
     // Update session with results
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       // Create result records
       const createdResults = await Promise.all(results.map((result, index) =>
         tx.comparisonResult.create({
@@ -245,7 +245,7 @@ async function runComparisonAsync(
             tokensUsed: result.tokensUsed.total,
             latencyMs: result.latencyMs,
             costEstimate: result.costEstimate,
-            scores: result.scores as unknown as Prisma.JsonObject,
+            scores: result.scores as unknown as any,
             rank: result.rank,
           },
         })

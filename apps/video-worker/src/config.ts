@@ -46,6 +46,14 @@ export interface MediaProviderKeyConfig {
     falApiKey?: string;
     /** API key untuk Google Gemini — dipakai Nano Banana 2 */
     geminiApiKey?: string;
+    /** API key untuk ElevenLabs — dipakai TTS voice synthesis (VF-4.1) */
+    elevenlabsApiKey?: string;
+    /** API key untuk Cartesia — dipakai TTS voice synthesis fallback (VF-4.1) */
+    cartesiaApiKey?: string;
+    /** Base URL untuk IndoTTS — self-hosted TTS (VF-4.1) */
+    indoTtsBaseUrl?: string;
+    /** API key untuk IndoTTS — opsional untuk self-hosted (VF-4.1) */
+    indoTtsApiKey?: string;
 }
 
 /**

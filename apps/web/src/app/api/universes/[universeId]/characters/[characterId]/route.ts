@@ -74,8 +74,8 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
           ? {
               metadata:
                 metadata === null
-                  ? Prisma.JsonNull
-                  : (metadata as Prisma.InputJsonValue),
+                  ? null as any
+                  : (metadata as any),
             }
           : {}),
       },

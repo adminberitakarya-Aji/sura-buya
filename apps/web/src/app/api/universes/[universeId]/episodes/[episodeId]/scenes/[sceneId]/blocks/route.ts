@@ -63,7 +63,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     const scene = await prisma.scene.update({
       where: { id: existing.id },
       data: {
-        blocks: blocks as unknown as Prisma.InputJsonValue,
+        blocks: blocks as unknown as any,
         generatedText,
         ...(textChanged ? { version: { increment: 1 } } : {}),
       },

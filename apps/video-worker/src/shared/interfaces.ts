@@ -1,5 +1,5 @@
 /**
- * Suro-Buya Video Worker — Shared Interfaces (VF-3.5)
+ * Suro-Buya Video Worker — Shared Interfaces (VF-3.5 + VF-4.1)
  *
  * Kontrak tipe yang dipakai bersama oleh workflow dan activities.
  * Temporal mengharuskan activity interface didefinisikan terpisah dari
@@ -8,6 +8,8 @@
  *
  * Lihat IMPLEMENTATION-PLAN-VIDEO-FACTORY.md VF-3.5:
  * "Workflow untuk MediaJob, retry policy, resume-on-crash"
+ *
+ * VF-4.1: Added generateVoiceover activity for TTS per dialog.
  */
 
 import type { ShotSpec, CharacterVisualProfile, MediaAssetType } from '@suro-buya/shared';
@@ -33,7 +35,7 @@ export interface MediaJobWorkflowInput {
     /** Index shot dalam storyboard (ShotSpec.index) */
     shotIndex: number;
 
-    /** Jenis media: IMAGE (keyframe) atau VIDEO_CLIP (image-to-video) */
+    /** Jenis media: IMAGE (keyframe), VIDEO_CLIP (image-to-video), atau AUDIO (TTS voiceover) */
     type: MediaAssetType;
 
     /**
@@ -59,6 +61,17 @@ export interface MediaJobWorkflowInput {
      * Wajib untuk type === 'VIDEO_CLIP' — video provider menganimasikan keyframe ini.
      */
     keyframeUrl?: string;
+
+    /**
+     * Untuk AUDIO: Voice profile karakter yang berbicara di shot ini (VF-4.1).
+     * Berisi provider, voiceId, dan settings dari CharacterAsset.voiceProfile.
+     * Wajib untuk type === 'AUDIO' — voice provider butuh voiceId per-karakter.
+     */
+    voiceProfile?: {
+        provider: string;
+        voiceId: string;
+        settings?: Record<string, unknown>;
+    };
 }
 
 /**
@@ -133,5 +146,26 @@ export interface MediaJobActivities {
         mediaAssetId: string;
         keyframeUrl: string;
         shotSpec: ShotSpec;
+    }): Promise<MediaGenerationResult>;
+
+    /**
+     * Generate voiceover (TTS) untuk satu shot (VF-4.1).
+     * Memakai VoiceProvider registry (ElevenLabs → Cartesia → IndoTTS) dengan fallback chain.
+     *
+     * Voice profile dari CharacterAsset.voiceProfile — provider TIDAK boleh punya
+     * default voice sendiri. Ini yang menjaga voice konsisten lintas episode.
+     *
+     * @param input.mediaAssetId Sama seperti generateImage — idempotency guard.
+     * @param input.shotSpec Shot spec dengan dialogue (text + characterId)
+     * @param input.voiceProfile Voice profile dari CharacterAsset
+     */
+    generateVoiceover(input: {
+        mediaAssetId: string;
+        shotSpec: ShotSpec;
+        voiceProfile: {
+            provider: string;
+            voiceId: string;
+            settings?: Record<string, unknown>;
+        };
     }): Promise<MediaGenerationResult>;
 }

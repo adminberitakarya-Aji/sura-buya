@@ -137,7 +137,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
             where: { id: scene.id },
             data: {
               generatedText,
-              ...(blocks ? { blocks: blocks as unknown as Prisma.InputJsonValue } : {}),
+              ...(blocks ? { blocks: blocks as unknown as any } : {}),
               status: 'GENERATED',
               version: { increment: 1 },
               metadata: {
@@ -147,7 +147,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
                 isFallback: event.metadata?.isFallback,
                 structuredOutput: event.metadata?.structuredOutput ?? false,
                 generatedAt: new Date().toISOString(),
-              } as Prisma.InputJsonValue,
+              } as any,
             },
           });
 

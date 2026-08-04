@@ -2,14 +2,32 @@
  * VF-3.7 — Studio Generate API Routes
  *
  * POST /api/universes/[universeId]/studio/[projectId]/generate
- *   Start media generation for all shots in the storyboard.
- *   Creates MediaAsset records (IMAGE per shot, VIDEO_CLIP per shot) and
- *   generates keyframes inline via engine-v2 ImageProvider registry.
- *   Falls back to mock provider if no API keys configured.
+ *   Start media generation for all shots in the storyboard — via Temporal
+ *   (video-worker, VF-3.5), BUKAN inline dalam HTTP request handler.
+ *
+ *   Cuma men-START workflow lalu return SEGERA (tidak menunggu generate
+ *   selesai) — generate sesungguhnya berjalan di proses `video-worker`
+ *   yang terpisah (long-running, di luar Next.js/Vercel serverless
+ *   function). Ini penting: kalau generate dilakukan sinkron di dalam
+ *   request handler, storyboard dengan banyak shot + video generation
+ *   asli (Kling/Seedance, bisa menitan per clip) akan nyaris pasti kena
+ *   timeout serverless function (biasa 10-60 detik). Video-worker via
+ *   Temporal sudah didesain khusus untuk long-running job seperti ini,
+ *   lengkap dengan retry, resume-on-crash, dan idempotency guard
+ *   (lihat apps/video-worker/src/activities/media-generation.ts).
+ *
+ *   Frontend (generate/page.tsx) polling GET setiap 2 detik untuk lihat
+ *   progress — MediaAsset di-update oleh workflow lewat activity
+ *   updateMediaAssetStatus(), bukan oleh route ini.
  *
  * GET /api/universes/[universeId]/studio/[projectId]/generate
- *   Get generation status — all MediaAssets for this project, grouped by shot.
- *   Returns per-shot status (PENDING/GENERATING/DONE/FAILED), resultUrl, cost.
+ *   Get generation status — DAN sekaligus jadi "reconciler": begitu
+ *   IMAGE MediaAsset suatu shot sudah DONE dan mode generate adalah 'all',
+ *   route ini yang men-START VIDEO_CLIP workflow untuk shot itu (karena
+ *   VIDEO_CLIP butuh keyframeUrl dari IMAGE yang baru selesai — tidak bisa
+ *   di-start bersamaan dengan IMAGE di POST). Pola ini cocok dengan
+ *   frontend yang sudah polling GET setiap 2 detik, jadi tidak perlu
+ *   endpoint/mekanisme baru untuk "lanjut ke video setelah image selesai".
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -22,69 +40,46 @@ interface RouteParams {
 }
 
 const startGenerateSchema = z.object({
-  /** Generate only IMAGE keyframes, or both IMAGE + VIDEO_CLIP? Default: 'all' */
+  /** Generate hanya IMAGE keyframe, atau IMAGE + VIDEO_CLIP? Default: 'all' */
   mode: z.enum(['images', 'all']).default('all'),
 });
 
 /**
- * Build a mock image registry for development without API keys.
- * Same pattern as parse-persona VF-1.8 and script VF-2.6.
+ * Start Temporal MediaJob workflow untuk satu MediaAsset — dipakai untuk
+ * IMAGE (dari POST) maupun VIDEO_CLIP (dari GET reconciler).
+ *
+ * Idempotent secara alami: workflowId Temporal = `media-job-${mediaAssetId}`
+ * (lihat video-worker/src/client.ts). Kalau workflow dengan ID itu sudah
+ * berjalan (mis. GET reconciler jalan 2x sebelum job pertama selesai),
+ * Temporal melempar WorkflowExecutionAlreadyStartedError — kita tangkap
+ * dan anggap sebagai "sudah jalan, tidak perlu start lagi", bukan error.
  */
-async function generateKeyframeInline(
-  shotSpec: any,
-  visualProfile: any,
-  artStyle: string | undefined,
-): Promise<{ url: string; providerUsed: string; cost: number }> {
-  // Dynamic import to avoid bundling engine-v2 in the route
-  const { createImageProviderRegistry, MediaProviderRegistry, MockImageProvider } =
-    await import('@suro-buya/engine-v2');
+async function startMediaJobSafe(input: {
+  mediaAssetId: string;
+  projectId: string;
+  shotIndex: number;
+  type: 'IMAGE' | 'VIDEO_CLIP';
+  shotSpec: unknown;
+  visualProfile?: unknown;
+  artStyle?: string;
+  keyframeUrl?: string;
+}): Promise<{ started: boolean }> {
+  const { startMediaJob } = await import('@suro-buya/video-worker/client');
+  const { WorkflowExecutionAlreadyStartedError } = await import('@temporalio/client');
 
-  const registry = new MediaProviderRegistry();
-  const mock = new MockImageProvider('mock-image-provider');
-  registry.registerImageProvider(mock);
-  registry.setImageChain([mock.name]);
-
-  const { buildAllPrompts } = await import('@suro-buya/engine-v2');
-  const prompts = buildAllPrompts({ shot: shotSpec, visualProfile, artStyle });
-
-  const { result, providerUsed } = await registry.generateImage({
-    prompt: prompts.visualPrompt,
-    referenceImages: visualProfile?.referenceImages,
-    negativePrompt: prompts.negativePrompt,
-    aspectRatio: '9:16',
-  });
-
-  return { url: result.url, providerUsed, cost: result.cost ?? 0 };
+  try {
+    await startMediaJob(input as any);
+    return { started: true };
+  } catch (err) {
+    if (err instanceof WorkflowExecutionAlreadyStartedError) {
+      // Sudah jalan dari trigger sebelumnya (mis. polling GET yang overlap) — bukan error.
+      return { started: false };
+    }
+    throw err;
+  }
 }
 
-/**
- * Generate a video clip inline (mock for MVP — real video gen via Temporal in production).
- */
-async function generateVideoClipInline(
-  keyframeUrl: string,
-  shotSpec: any,
-): Promise<{ url: string; providerUsed: string; cost: number }> {
-  const { createVideoProviderRegistry, MediaProviderRegistry, MockVideoProvider, resolveMotionPrompt } =
-    await import('@suro-buya/engine-v2');
-
-  const registry = new MediaProviderRegistry();
-  const mock = new MockVideoProvider('mock-video-provider');
-  registry.registerVideoProvider(mock);
-  registry.setVideoChain([mock.name]);
-
-  const motion = resolveMotionPrompt(shotSpec.motionPrompt, shotSpec.cameraAngle, shotSpec.duration);
-
-  const { result, providerUsed } = await registry.generateVideoClip({
-    keyframeUrl,
-    motionPrompt: motion.prompt,
-    duration: shotSpec.duration,
-    aspectRatio: '9:16',
-  });
-
-  return { url: result.url, providerUsed, cost: result.cost ?? 0 };
-}
-
-/** POST — Start generation */
+/** POST — Start generation (fire-and-forget, TIDAK menunggu generate selesai) */
 export async function POST(req: NextRequest, { params }: RouteParams) {
   try {
     const userId = await requireUserId();
@@ -121,19 +116,33 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // 2. Update project status to GENERATING
+    const visualProfile = project.character?.characterAsset
+      ? {
+          referenceImages: project.character.characterAsset.referenceImages,
+          styleTags: (project.character.metadata as any)?.styleTags ?? [],
+          colorPalette: (project.character.metadata as any)?.colorPalette ?? [],
+          negativePrompt: (project.character.metadata as any)?.negativePrompt,
+        }
+      : undefined;
+    const artStyle = (project.settings as any)?.artStyle;
+
+    // 2. Persist `mode` di project.settings — dibaca oleh GET reconciler untuk
+    //    tahu apakah harus auto-lanjut ke VIDEO_CLIP setelah IMAGE selesai.
     await prisma.videoProject.update({
       where: { id: params.projectId },
-      data: { status: 'GENERATING' },
+      data: {
+        status: 'GENERATING',
+        settings: { ...((project.settings as object) ?? {}), generateMode: mode },
+      },
     });
 
-    // 3. Create or update MediaAsset records for each shot
-    const results: any[] = [];
+    // 3. Create MediaAsset (IMAGE) per shot yang belum ada, lalu START workflow-nya.
+    //    TIDAK menunggu hasil — hanya menjadwalkan job ke Temporal task queue.
+    const started: { shotIndex: number; type: string; started: boolean }[] = [];
 
     for (const shot of storyboard) {
       const shotIndex = shot.index;
 
-      // Check if IMAGE MediaAsset already exists for this shot
       let imageAsset = await prisma.mediaAsset.findFirst({
         where: { projectId: params.projectId, shotIndex, type: 'IMAGE' },
       });
@@ -150,54 +159,83 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         });
       }
 
-      // Generate keyframe inline
-      if (imageAsset.status !== 'DONE') {
-        await prisma.mediaAsset.update({
-          where: { id: imageAsset.id },
-          data: { status: 'GENERATING' },
+      // Cuma start kalau belum DONE/GENERATING — hindari re-trigger job yang
+      // sudah selesai atau sedang berjalan.
+      if (imageAsset.status === 'PENDING' || imageAsset.status === 'FAILED') {
+        const { started: didStart } = await startMediaJobSafe({
+          mediaAssetId: imageAsset.id,
+          projectId: params.projectId,
+          shotIndex,
+          type: 'IMAGE',
+          shotSpec: shot,
+          visualProfile,
+          artStyle,
         });
-
-        try {
-          const visualProfile = project.character?.characterAsset
-            ? {
-                referenceImages: project.character.characterAsset.referenceImages,
-                styleTags: (project.character.metadata as any)?.styleTags ?? [],
-                colorPalette: (project.character.metadata as any)?.colorPalette ?? [],
-                negativePrompt: (project.character.metadata as any)?.negativePrompt,
-              }
-            : undefined;
-
-          const result = await generateKeyframeInline(
-            shot,
-            visualProfile,
-            (project.settings as any)?.artStyle,
-          );
-
-          imageAsset = await prisma.mediaAsset.update({
-            where: { id: imageAsset.id },
-            data: {
-              status: 'DONE',
-              resultUrl: result.url,
-              providerUsed: result.providerUsed,
-              providerAttempts: [result.providerUsed],
-              cost: result.cost,
-            },
-          });
-        } catch (err) {
-          imageAsset = await prisma.mediaAsset.update({
-            where: { id: imageAsset.id },
-            data: {
-              status: 'FAILED',
-              lastError: err instanceof Error ? err.message : String(err),
-            },
-          });
-        }
+        started.push({ shotIndex, type: 'IMAGE', started: didStart });
+      } else {
+        started.push({ shotIndex, type: 'IMAGE', started: false });
       }
+    }
 
-      results.push({ shotIndex, type: 'IMAGE', asset: imageAsset });
+    // 4. Return SEGERA — jangan tunggu generate selesai. Frontend polling GET
+    //    (lihat generate/page.tsx) yang akan menampilkan progress real-time.
+    return NextResponse.json({
+      message: 'Generation started — poll GET for progress',
+      started,
+      totalShots: storyboard.length,
+    });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
 
-      // Generate VIDEO_CLIP if mode is 'all' and image is DONE
-      if (mode === 'all' && imageAsset.status === 'DONE' && imageAsset.resultUrl) {
+/** GET — Get generation status (dan sekaligus reconciler untuk auto-start VIDEO_CLIP) */
+export async function GET(_req: NextRequest, { params }: RouteParams) {
+  try {
+    const userId = await requireUserId();
+    if (!userId) return unauthorized();
+
+    await assertCan(userId, params.universeId, 'content:read');
+
+    const { prisma } = await import('@/lib/prisma');
+
+    // Verify project exists
+    const project = await prisma.videoProject.findUnique({
+      where: { id: params.projectId },
+      select: {
+        universeId: true,
+        storyboard: true,
+        status: true,
+        title: true,
+        settings: true,
+      },
+    });
+
+    if (!project || project.universeId !== params.universeId) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+
+    const storyboard = (project.storyboard as any[]) ?? [];
+    const generateMode = (project.settings as any)?.generateMode as
+      | 'images'
+      | 'all'
+      | undefined;
+
+    // Reconciler: kalau mode 'all', untuk tiap shot yang IMAGE-nya sudah DONE
+    // tapi VIDEO_CLIP belum pernah di-start, start VIDEO_CLIP workflow sekarang.
+    // Ini yang menggantikan logic lama yang generate VIDEO_CLIP langsung di
+    // dalam POST — sekarang di-drive oleh polling GET yang sudah ada di frontend.
+    if (generateMode === 'all') {
+      for (const shot of storyboard) {
+        const shotIndex = shot.index;
+
+        const imageAsset = await prisma.mediaAsset.findFirst({
+          where: { projectId: params.projectId, shotIndex, type: 'IMAGE' },
+        });
+        if (!imageAsset || imageAsset.status !== 'DONE' || !imageAsset.resultUrl) {
+          continue; // IMAGE belum selesai, belum bisa mulai VIDEO_CLIP
+        }
+
         let videoAsset = await prisma.mediaAsset.findFirst({
           where: { projectId: params.projectId, shotIndex, type: 'VIDEO_CLIP' },
         });
@@ -214,84 +252,17 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           });
         }
 
-        if (videoAsset.status !== 'DONE') {
-          await prisma.mediaAsset.update({
-            where: { id: videoAsset.id },
-            data: { status: 'GENERATING' },
+        if (videoAsset.status === 'PENDING' || videoAsset.status === 'FAILED') {
+          await startMediaJobSafe({
+            mediaAssetId: videoAsset.id,
+            projectId: params.projectId,
+            shotIndex,
+            type: 'VIDEO_CLIP',
+            shotSpec: shot,
+            keyframeUrl: imageAsset.resultUrl,
           });
-
-          try {
-            const result = await generateVideoClipInline(imageAsset.resultUrl, shot);
-
-            videoAsset = await prisma.mediaAsset.update({
-              where: { id: videoAsset.id },
-              data: {
-                status: 'DONE',
-                resultUrl: result.url,
-                providerUsed: result.providerUsed,
-                providerAttempts: [result.providerUsed],
-                cost: result.cost,
-              },
-            });
-          } catch (err) {
-            videoAsset = await prisma.mediaAsset.update({
-              where: { id: videoAsset.id },
-              data: {
-                status: 'FAILED',
-                lastError: err instanceof Error ? err.message : String(err),
-              },
-            });
-          }
         }
-
-        results.push({ shotIndex, type: 'VIDEO_CLIP', asset: videoAsset });
       }
-    }
-
-    // 4. Update project status based on results
-    const allDone = results.every((r) => r.asset.status === 'DONE');
-    const anyFailed = results.some((r) => r.asset.status === 'FAILED');
-
-    await prisma.videoProject.update({
-      where: { id: params.projectId },
-      data: { status: allDone ? 'RENDERED' : anyFailed ? 'GENERATING' : 'GENERATING' },
-    });
-
-    const totalCost = results.reduce((sum, r) => sum + (r.asset.cost ?? 0), 0);
-
-    return NextResponse.json({
-      results,
-      totalCost,
-      summary: {
-        total: results.length,
-        done: results.filter((r) => r.asset.status === 'DONE').length,
-        failed: results.filter((r) => r.asset.status === 'FAILED').length,
-        pending: results.filter((r) => r.asset.status === 'PENDING').length,
-      },
-    });
-  } catch (error) {
-    return errorResponse(error);
-  }
-}
-
-/** GET — Get generation status */
-export async function GET(_req: NextRequest, { params }: RouteParams) {
-  try {
-    const userId = await requireUserId();
-    if (!userId) return unauthorized();
-
-    await assertCan(userId, params.universeId, 'content:read');
-
-    const { prisma } = await import('@/lib/prisma');
-
-    // Verify project exists
-    const project = await prisma.videoProject.findUnique({
-      where: { id: params.projectId },
-      select: { universeId: true, storyboard: true, status: true, title: true },
-    });
-
-    if (!project || project.universeId !== params.universeId) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
     // Get all MediaAssets for this project, ordered by shotIndex then type
@@ -301,30 +272,38 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     });
 
     // Group by shotIndex
-    const storyboard = (project.storyboard as any[]) ?? [];
     const shots = storyboard.map((shot) => {
-      const assets = mediaAssets.filter((a) => a.shotIndex === shot.index);
+      const assets = mediaAssets.filter((a: typeof mediaAssets[number]) => a.shotIndex === shot.index);
       return {
         shotIndex: shot.index,
         shot,
-        imageAsset: assets.find((a) => a.type === 'IMAGE') ?? null,
-        videoAsset: assets.find((a) => a.type === 'VIDEO_CLIP') ?? null,
+        imageAsset: assets.find((a: typeof mediaAssets[number]) => a.type === 'IMAGE') ?? null,
+        videoAsset: assets.find((a: typeof mediaAssets[number]) => a.type === 'VIDEO_CLIP') ?? null,
       };
     });
 
-    const totalCost = mediaAssets.reduce((sum, a) => sum + (a.cost ?? 0), 0);
+    const totalCost = mediaAssets.reduce((sum: number, a: typeof mediaAssets[number]) => sum + (a.cost ?? 0), 0);
+    const allDone = mediaAssets.length > 0 && mediaAssets.every((a: typeof mediaAssets[number]) => a.status === 'DONE');
+
+    // Update project status kalau semua sudah selesai (tidak menunggu polling terakhir)
+    if (allDone && project.status !== 'RENDERED') {
+      await prisma.videoProject.update({
+        where: { id: params.projectId },
+        data: { status: 'RENDERED' },
+      });
+    }
 
     return NextResponse.json({
-      projectStatus: project.status,
+      projectStatus: allDone ? 'RENDERED' : project.status,
       title: project.title,
       shots,
       totalCost,
       summary: {
         total: mediaAssets.length,
-        done: mediaAssets.filter((a) => a.status === 'DONE').length,
-        failed: mediaAssets.filter((a) => a.status === 'FAILED').length,
-        pending: mediaAssets.filter((a) => a.status === 'PENDING').length,
-        generating: mediaAssets.filter((a) => a.status === 'GENERATING').length,
+        done: mediaAssets.filter((a: typeof mediaAssets[number]) => a.status === 'DONE').length,
+        failed: mediaAssets.filter((a: typeof mediaAssets[number]) => a.status === 'FAILED').length,
+        pending: mediaAssets.filter((a: typeof mediaAssets[number]) => a.status === 'PENDING').length,
+        generating: mediaAssets.filter((a: typeof mediaAssets[number]) => a.status === 'GENERATING').length,
       },
     });
   } catch (error) {

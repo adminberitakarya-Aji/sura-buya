@@ -1,0 +1,38 @@
+{
+  "name": "@suro-buya/video-renderer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Suro-Buya Video Renderer — Remotion-based composition + FFmpeg encode (VF-4.4/VF-4.5)",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules/.cache"
+  },
+  "dependencies": {
+    "@suro-buya/shared": "workspace:*",
+    "@suro-buya/engine-v2": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.0",
+    "typescript": "^5.3.0",
+    "tsx": "^4.6.0",
+    "vitest": "^1.0.0"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

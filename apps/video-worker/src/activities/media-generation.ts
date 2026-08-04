@@ -1,14 +1,16 @@
 /**
- * Suro-Buya Video Worker — Media Generation Activities (VF-3.5)
+ * Suro-Buya Video Worker — Media Generation Activities (VF-3.5 + VF-4.1)
  *
- * Activity untuk generate media (image/video) per shot via MediaProviderRegistry
- * (VF-1.4/VF-3.1/VF-3.3). Fallback chain di-handle oleh registry — activity
+ * Activity untuk generate media (image/video/audio) per shot via MediaProviderRegistry
+ * (VF-1.4/VF-3.1/VF-3.3/VF-4.1). Fallback chain di-handle oleh registry — activity
  * ini hanya memanggil registry dan return hasilnya.
  *
  * Temporal retry policy (DEFAULT_RETRY_POLICY di config.ts) meng-handle retry
  * untuk transient failures (network, rate limit, provider timeout). Kalau
  * seluruh fallback chain habis, MediaChainExhaustedError dilempar dan workflow
  * menandai MediaAsset sebagai FAILED.
+ *
+ * VF-4.1: Added generateVoiceover activity for TTS per dialog.
  *
  * Validasi shot: sebelum memanggil provider (yang berbayar), kita jalankan
  * enforceStyleGuide() (VF-3.2) lewat validateShotOrThrow(). Violation error
@@ -23,13 +25,13 @@
  * biaya dobel) kalau crash terjadi SETELAH provider sukses tapi SEBELUM
  * Temporal mencatat activity selesai.
  *
- * Mitigasi: checkAlreadyDone() di awal generateImage()/generateVideoClip()
- * mengecek status MediaAsset di DB — kalau sudah `DONE` dengan `resultUrl`
- * terisi, activity return hasil lama (`fromCache: true`) TANPA memanggil
- * provider lagi. Ini bukan "exactly-once" sempurna (masih ada celah kecil:
- * generate sukses TAPI belum sempat updateMediaAssetStatus(DONE) tercatat
- * di DB saat crash terjadi — di titik itu status masih GENERATING, jadi
- * guard ini tidak menangkapnya dan provider tetap dipanggil ulang), tapi
+ * Mitigasi: checkAlreadyDone() di awal generateImage()/generateVideoClip()/
+ * generateVoiceover() mengecek status MediaAsset di DB — kalau sudah `DONE`
+ * dengan `resultUrl` terisi, activity return hasil lama (`fromCache: true`)
+ * TANPA memanggil provider lagi. Ini bukan "exactly-once" sempurna (masih
+ * ada celah kecil: generate sukses TAPI belum sempat updateMediaAssetStatus(DONE)
+ * tercatat di DB saat crash terjadi — di titik itu status masih GENERATING,
+ * jadi guard ini tidak menangkapnya dan provider tetap dipanggil ulang), tapi
  * menutup kasus paling umum: retry SETELAH DONE tercatat.
  */
 
@@ -45,8 +47,10 @@ import { getMediaAsset } from './media-asset.js';
 import {
     createImageRegistry,
     createVideoRegistry,
+    createVoiceRegistry,
     createMockImageRegistry,
     createMockVideoRegistry,
+    createMockVoiceRegistry,
 } from '../lib/provider-setup.js';
 import type { MediaProviderKeyConfig } from '../config.js';
 import { ApplicationFailure } from '@temporalio/common';
@@ -165,7 +169,7 @@ async function checkAlreadyDone(
  * testing tanpa mocking provider nyata.
  */
 function shouldUseMock(keys: MediaProviderKeyConfig): boolean {
-    return !keys.falApiKey && !keys.geminiApiKey;
+    return !keys.falApiKey && !keys.geminiApiKey && !keys.elevenlabsApiKey && !keys.cartesiaApiKey;
 }
 
 /**
@@ -208,6 +212,10 @@ export async function generateImage(input: {
     const keys: MediaProviderKeyConfig = {
         falApiKey: process.env['FAL_API_KEY'] || undefined,
         geminiApiKey: process.env['GEMINI_API_KEY'] || undefined,
+        elevenlabsApiKey: process.env['ELEVENLABS_API_KEY'] || undefined,
+        cartesiaApiKey: process.env['CARTESIA_API_KEY'] || undefined,
+        indoTtsBaseUrl: process.env['INDO_TTS_BASE_URL'] || undefined,
+        indoTtsApiKey: process.env['INDO_TTS_API_KEY'] || undefined,
     };
 
     const registry = shouldUseMock(keys)
@@ -272,6 +280,10 @@ export async function generateVideoClip(input: {
     const keys: MediaProviderKeyConfig = {
         falApiKey: process.env['FAL_API_KEY'] || undefined,
         geminiApiKey: process.env['GEMINI_API_KEY'] || undefined,
+        elevenlabsApiKey: process.env['ELEVENLABS_API_KEY'] || undefined,
+        cartesiaApiKey: process.env['CARTESIA_API_KEY'] || undefined,
+        indoTtsBaseUrl: process.env['INDO_TTS_BASE_URL'] || undefined,
+        indoTtsApiKey: process.env['INDO_TTS_API_KEY'] || undefined,
     };
 
     const registry = shouldUseMock(keys)
@@ -285,6 +297,79 @@ export async function generateVideoClip(input: {
             motionPrompt: motion.prompt,
             duration: shotSpec.duration,
             aspectRatio: '9:16',
+        });
+
+        return {
+            resultUrl: result.url,
+            providerUsed,
+            providerAttempts: attempts,
+            cost: result.cost ?? 0,
+        };
+    } catch (err) {
+        rethrowChainExhausted(err);
+    }
+}
+
+/**
+ * Activity: Generate voiceover (TTS) untuk satu shot (VF-4.1).
+ *
+ * Alur:
+ * 1. Validasi shot punya dialogue
+ * 2. Buat MediaProviderRegistry (VF-4.1: ElevenLabs → Cartesia → IndoTTS)
+ * 3. Panggil registry.synthesizeVoice() — fallback chain otomatis
+ * 4. Return result (url, providerUsed, attempts, cost)
+ *
+ * Voice profile dari CharacterAsset.voiceProfile — provider TIDAK boleh punya
+ * default voice sendiri. Ini yang menjaga voice konsisten lintas episode
+ * (VF-4 AC #2: "Voice karakter terdengar sama/konsisten di lebih dari satu episode").
+ *
+ * @param input.mediaAssetId ID MediaAsset di DB — dipakai idempotency guard
+ * @param input.shotSpec Shot spec dengan dialogue (text + characterId)
+ * @param input.voiceProfile Voice profile dari CharacterAsset
+ */
+export async function generateVoiceover(input: {
+    mediaAssetId: string;
+    shotSpec: ShotSpec;
+    voiceProfile: {
+        provider: string;
+        voiceId: string;
+        settings?: Record<string, unknown>;
+    };
+}): Promise<MediaGenerationResult> {
+    const { mediaAssetId, shotSpec, voiceProfile } = input;
+
+    // Idempotency guard — lihat checkAlreadyDone() untuk penjelasan lengkap.
+    const cached = await checkAlreadyDone(mediaAssetId);
+    if (cached) return cached;
+
+    // Validasi: shot harus punya dialogue
+    if (!shotSpec.dialogue) {
+        throw ApplicationFailure.nonRetryable(
+            `Shot ${shotSpec.index} has no dialogue — cannot generate voiceover`,
+            'NoDialogue',
+        );
+    }
+
+    // Setup registry — pakai mock kalau tidak ada API key
+    const keys: MediaProviderKeyConfig = {
+        falApiKey: process.env['FAL_API_KEY'] || undefined,
+        geminiApiKey: process.env['GEMINI_API_KEY'] || undefined,
+        elevenlabsApiKey: process.env['ELEVENLABS_API_KEY'] || undefined,
+        cartesiaApiKey: process.env['CARTESIA_API_KEY'] || undefined,
+        indoTtsBaseUrl: process.env['INDO_TTS_BASE_URL'] || undefined,
+        indoTtsApiKey: process.env['INDO_TTS_API_KEY'] || undefined,
+    };
+
+    const registry = shouldUseMock(keys)
+        ? createMockVoiceRegistry()
+        : createVoiceRegistry(keys);
+
+    // Generate voiceover via fallback chain
+    try {
+        const { result, providerUsed, attempts } = await registry.synthesizeVoice({
+            text: shotSpec.dialogue.line,
+            voiceId: voiceProfile.voiceId,
+            settings: voiceProfile.settings,
         });
 
         return {

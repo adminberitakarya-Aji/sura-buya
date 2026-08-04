@@ -22,6 +22,8 @@
     "@suro-buya/engine-v2": "workspace:*",
     "@suro-buya/shared": "workspace:*",
     "@suro-buya/ui": "workspace:*",
+    "@suro-buya/video-worker": "workspace:*",
+    "@temporalio/client": "^1.3.0",
     "@tanstack/react-query": "^5.101.4",
     "bcryptjs": "^2.4.3",
     "lucide-react": "^0.383.0",

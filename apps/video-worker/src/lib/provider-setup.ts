@@ -1,9 +1,9 @@
 /**
- * Suro-Buya Video Worker — Media Provider Registry Setup (VF-3.5)
+ * Suro-Buya Video Worker — Media Provider Registry Setup (VF-3.5 + VF-4.1)
  *
- * Membangun MediaProviderRegistry (VF-1.4/VF-3.1/VF-3.3) dengan API keys
+ * Membangun MediaProviderRegistry (VF-1.4/VF-3.1/VF-3.3/VF-4.1) dengan API keys
  * dari environment variables. Dipakai oleh activities (media-generation.ts)
- * untuk generate image/video per shot.
+ * untuk generate image/video/audio per shot.
  *
  * Pola: sama dengan apps/web API routes — API key di-inject dari env,
  * engine-v2 tidak baca env langsung (pola sejak VF-1.5). Video-worker
@@ -12,16 +12,20 @@
  * Fallback chains (locked di REDESIGN-VIDEO-FACTORY.md §4):
  * - Image: Nano Banana 2 (primary) → Flux 2 Pro (fallback)
  * - Video: Kling 3.0 (primary) → Seedance 2 (fallback 1) → Wan 2.7 (fallback 2)
+ * - Voice: ElevenLabs (primary) → Cartesia (fallback 1) → IndoTTS (fallback 2)
  */
 
 import {
     createImageProviderRegistry,
     createVideoProviderRegistry,
+    createVoiceProviderRegistry,
     MediaProviderRegistry,
     MockImageProvider,
     MockVideoProvider,
+    MockVoiceProvider,
     type ImageProviderOptions,
     type VideoProviderOptions,
+    type VoiceProviderOptions,
 } from '@suro-buya/engine-v2';
 import type { MediaProviderKeyConfig } from '../config.js';
 
@@ -72,6 +76,37 @@ export function createVideoRegistry(
 }
 
 /**
+ * Buat registry untuk voice provider dengan API keys dari config.
+ * Chain: ElevenLabs → Cartesia → IndoTTS (VF-4.1).
+ *
+ * Kalau API key kosong, provider tetap terdaftar tapi isAvailable() return false —
+ * fallback chain akan skip ke provider berikutnya. IndoTTS bisa self-hosted
+ * tanpa API key (baseUrl saja sudah cukup).
+ */
+export function createVoiceRegistry(
+    keys: MediaProviderKeyConfig,
+): MediaProviderRegistry {
+    const elevenlabsOpts: VoiceProviderOptions = {
+        apiKey: keys.elevenlabsApiKey,
+    };
+
+    const cartesiaOpts: VoiceProviderOptions = {
+        apiKey: keys.cartesiaApiKey,
+    };
+
+    const indoTtsOpts: VoiceProviderOptions = {
+        apiKey: keys.indoTtsApiKey,
+        baseUrl: keys.indoTtsBaseUrl,
+    };
+
+    return createVoiceProviderRegistry({
+        elevenlabs: elevenlabsOpts,
+        cartesia: cartesiaOpts,
+        indoTts: indoTtsOpts,
+    });
+}
+
+/**
  * Buat registry dengan mock providers — dipakai untuk testing tanpa API key nyata.
  * Mock provider selalu available dan return URL dummy.
  */
@@ -91,5 +126,16 @@ export function createMockVideoRegistry(): MediaProviderRegistry {
     const mock = new MockVideoProvider('mock-video-provider');
     registry.registerVideoProvider(mock);
     registry.setVideoChain([mock.name]);
+    return registry;
+}
+
+/**
+ * Buat registry dengan mock voice provider — dipakai untuk testing (VF-4.1).
+ */
+export function createMockVoiceRegistry(): MediaProviderRegistry {
+    const registry = new MediaProviderRegistry();
+    const mock = new MockVoiceProvider('mock-voice-provider');
+    registry.registerVoiceProvider(mock);
+    registry.setVoiceChain([mock.name]);
     return registry;
 }

@@ -81,7 +81,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     const bibleFile = await prisma.bibleFile.create({
       data: {
         ...data,
-        frontmatter: data.frontmatter as Prisma.InputJsonValue | undefined,
+        frontmatter: data.frontmatter as any | undefined,
         universeId: params.universeId,
         createdById: userId,
         updatedById: userId,

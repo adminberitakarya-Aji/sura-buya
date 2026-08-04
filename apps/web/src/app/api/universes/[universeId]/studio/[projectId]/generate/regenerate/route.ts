@@ -2,11 +2,16 @@
  * VF-3.7 — Studio Regenerate Single Shot API
  *
  * POST /api/universes/[universeId]/studio/[projectId]/generate/regenerate
- *   Regenerate a single shot's media asset (IMAGE or VIDEO_CLIP).
- *   Body: { shotIndex: number, type: 'IMAGE' | 'VIDEO_CLIP' }
+ *   Regenerate a single shot's media asset (IMAGE or VIDEO_CLIP) — via
+ *   Temporal (video-worker, VF-3.5), sama seperti /generate. Hapus
+ *   MediaAsset lama, buat yang baru (PENDING), lalu start workflow-nya.
+ *   TIDAK menunggu selesai — frontend polling GET /generate untuk progress
+ *   (lihat catatan lengkap di ../route.ts).
  *
- *   This deletes the existing MediaAsset and creates a new one, then
- *   generates it inline. Used for "regenerate per shot" in the UI.
+ *   Pakai record MediaAsset BARU (bukan reset yang lama) supaya idempotency
+ *   guard di video-worker (checkAlreadyDone — lihat media-generation.ts)
+ *   tidak keliru menganggap job ini "sudah DONE" dari sebelumnya dan
+ *   men-skip generate ulang, yang justru berlawanan dengan maksud regenerate.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -23,7 +28,7 @@ const regenerateSchema = z.object({
   type: z.enum(['IMAGE', 'VIDEO_CLIP']),
 });
 
-/** POST — Regenerate a single shot */
+/** POST — Regenerate a single shot (fire-and-forget via Temporal) */
 export async function POST(req: NextRequest, { params }: RouteParams) {
   try {
     const userId = await requireUserId();
@@ -68,118 +73,61 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // 2. Delete existing MediaAsset for this shot+type
+    let keyframeUrl: string | undefined;
+    if (type === 'VIDEO_CLIP') {
+      const imageAsset = await prisma.mediaAsset.findFirst({
+        where: { projectId: params.projectId, shotIndex, type: 'IMAGE' },
+      });
+      if (!imageAsset || imageAsset.status !== 'DONE' || !imageAsset.resultUrl) {
+        return NextResponse.json(
+          { error: 'Keyframe image must be generated first before video clip' },
+          { status: 400 },
+        );
+      }
+      keyframeUrl = imageAsset.resultUrl;
+    }
+
+    // 2. Hapus MediaAsset lama untuk shot+type ini, buat yang baru (PENDING) —
+    //    id baru supaya idempotency guard video-worker tidak salah-kira "sudah DONE".
     await prisma.mediaAsset.deleteMany({
       where: { projectId: params.projectId, shotIndex, type },
     });
 
-    // 3. Create new MediaAsset
-    let asset = await prisma.mediaAsset.create({
+    const asset = await prisma.mediaAsset.create({
       data: {
         projectId: params.projectId,
         shotIndex,
         type,
-        status: 'GENERATING',
+        status: 'PENDING',
         providerAttempts: [],
       },
     });
 
-    // 4. Generate inline
-    const { MediaProviderRegistry, MockImageProvider, MockVideoProvider, buildAllPrompts, resolveMotionPrompt } =
-      await import('@suro-buya/engine-v2');
+    // 3. Start workflow-nya via Temporal — TIDAK menunggu selesai.
+    const { startMediaJob } = await import('@suro-buya/video-worker/client');
 
-    try {
-      if (type === 'IMAGE') {
-        const registry = new MediaProviderRegistry();
-        const mock = new MockImageProvider('mock-image-provider');
-        registry.registerImageProvider(mock);
-        registry.setImageChain([mock.name]);
+    const visualProfile =
+      type === 'IMAGE' && project.character?.characterAsset
+        ? {
+            referenceImages: project.character.characterAsset.referenceImages,
+            styleTags: (project.character.metadata as any)?.styleTags ?? [],
+            colorPalette: (project.character.metadata as any)?.colorPalette ?? [],
+            negativePrompt: (project.character.metadata as any)?.negativePrompt,
+          }
+        : undefined;
 
-        const visualProfile = project.character?.characterAsset
-          ? {
-              referenceImages: project.character.characterAsset.referenceImages,
-              styleTags: (project.character.metadata as any)?.styleTags ?? [],
-              colorPalette: (project.character.metadata as any)?.colorPalette ?? [],
-              negativePrompt: (project.character.metadata as any)?.negativePrompt,
-            }
-          : undefined;
+    await startMediaJob({
+      mediaAssetId: asset.id,
+      projectId: params.projectId,
+      shotIndex,
+      type,
+      shotSpec: shot,
+      visualProfile,
+      artStyle: (project.settings as any)?.artStyle,
+      keyframeUrl,
+    } as any);
 
-        const prompts = buildAllPrompts({
-          shot,
-          visualProfile,
-          artStyle: (project.settings as any)?.artStyle,
-        });
-
-        const { result, providerUsed } = await registry.generateImage({
-          prompt: prompts.visualPrompt,
-          referenceImages: visualProfile?.referenceImages,
-          negativePrompt: prompts.negativePrompt,
-          aspectRatio: '9:16',
-        });
-
-        asset = await prisma.mediaAsset.update({
-          where: { id: asset.id },
-          data: {
-            status: 'DONE',
-            resultUrl: result.url,
-            providerUsed,
-            providerAttempts: [providerUsed],
-            cost: result.cost ?? 0,
-          },
-        });
-      } else {
-        // VIDEO_CLIP — need keyframe URL from IMAGE asset
-        const imageAsset = await prisma.mediaAsset.findFirst({
-          where: { projectId: params.projectId, shotIndex, type: 'IMAGE' },
-        });
-
-        if (!imageAsset || imageAsset.status !== 'DONE' || !imageAsset.resultUrl) {
-          asset = await prisma.mediaAsset.update({
-            where: { id: asset.id },
-            data: {
-              status: 'FAILED',
-              lastError: 'Keyframe image must be generated first before video clip',
-            },
-          });
-          return NextResponse.json({ asset }, { status: 400 });
-        }
-
-        const registry = new MediaProviderRegistry();
-        const mock = new MockVideoProvider('mock-video-provider');
-        registry.registerVideoProvider(mock);
-        registry.setVideoChain([mock.name]);
-
-        const motion = resolveMotionPrompt(shot.motionPrompt, shot.cameraAngle, shot.duration);
-
-        const { result, providerUsed } = await registry.generateVideoClip({
-          keyframeUrl: imageAsset.resultUrl,
-          motionPrompt: motion.prompt,
-          duration: shot.duration,
-          aspectRatio: '9:16',
-        });
-
-        asset = await prisma.mediaAsset.update({
-          where: { id: asset.id },
-          data: {
-            status: 'DONE',
-            resultUrl: result.url,
-            providerUsed,
-            providerAttempts: [providerUsed],
-            cost: result.cost ?? 0,
-          },
-        });
-      }
-    } catch (err) {
-      asset = await prisma.mediaAsset.update({
-        where: { id: asset.id },
-        data: {
-          status: 'FAILED',
-          lastError: err instanceof Error ? err.message : String(err),
-        },
-      });
-    }
-
-    return NextResponse.json({ asset });
+    return NextResponse.json({ asset, message: 'Regeneration started — poll GET /generate for progress' });
   } catch (error) {
     return errorResponse(error);
   }

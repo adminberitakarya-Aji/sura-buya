@@ -78,7 +78,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           reviewerId: userId,
           decision,
           feedback,
-          annotations: annotations ? (annotations as Prisma.InputJsonValue) : Prisma.JsonNull,
+          annotations: annotations ? (annotations as any) : null as any,
         },
       }),
       prisma.scene.update({

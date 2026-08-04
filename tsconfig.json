@@ -20,6 +20,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
       "@suro-buya/*": ["packages/*/src", "apps/*/src"]
     },

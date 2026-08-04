@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import type { Prisma } from '@prisma/client';
+// any was removed in Prisma 5.22.0
 import { prisma } from '@/lib/prisma';
 import { assertCan } from '@/lib/rbac';
 import { requireUserId, unauthorized, errorResponse } from '@/lib/api-helpers';
@@ -93,7 +93,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
         model: data.model,
         isDefault: data.isDefault ?? false,
         ...(data.parameters !== undefined
-          ? { parameters: data.parameters as Prisma.InputJsonValue }
+          ? { parameters: data.parameters as any }
           : {}),
         ...encryptedKeyUpdate,
       },
@@ -102,7 +102,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
         model: data.model,
         ...(data.isDefault !== undefined ? { isDefault: data.isDefault } : {}),
         ...(data.parameters !== undefined
-          ? { parameters: data.parameters as Prisma.InputJsonValue }
+          ? { parameters: data.parameters as any }
           : {}),
         ...encryptedKeyUpdate,
       },

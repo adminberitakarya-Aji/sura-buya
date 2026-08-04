@@ -58,7 +58,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       data: {
         ...restData,
         ...(plan !== undefined
-          ? { plan: plan === null ? Prisma.JsonNull : (plan as Prisma.InputJsonValue) }
+          ? { plan: plan === null ? null as any : (plan as any) }
           : {}),
       },
     });

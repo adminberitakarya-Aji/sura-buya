@@ -62,8 +62,8 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
           ? {
               frontmatter:
                 frontmatter === null
-                  ? Prisma.JsonNull
-                  : (frontmatter as Prisma.InputJsonValue),
+                  ? null as any
+                  : (frontmatter as any),
             }
           : {}),
         updatedById: userId,

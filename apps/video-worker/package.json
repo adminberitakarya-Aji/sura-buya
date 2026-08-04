@@ -4,6 +4,16 @@
   "private": true,
   "type": "module",
   "description": "Suro-Buya Video Worker — Temporal-based MediaJob processing with retry & resume-on-crash (VF-3.5)",
+  "exports": {
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.js"
+    },
+    "./shared": {
+      "types": "./dist/shared/interfaces.d.ts",
+      "import": "./dist/shared/interfaces.js"
+    }
+  },
   "prisma": {
     "schema": "../web/prisma/schema.prisma"
   },

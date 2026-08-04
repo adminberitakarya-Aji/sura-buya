@@ -1,8 +1,8 @@
 /**
- * Suro-Buya Video Worker — MediaJob Workflow (VF-3.5)
+ * Suro-Buya Video Worker — MediaJob Workflow (VF-3.5 + VF-4.1)
  *
- * Temporal workflow untuk memproses satu MediaJob (generate image atau video
- * clip per shot). Workflow ini adalah inti dari VF-3.5:
+ * Temporal workflow untuk memproses satu MediaJob (generate image, video clip,
+ * atau audio voiceover per shot). Workflow ini adalah inti dari VF-3.5:
  *
  * - "Workflow untuk MediaJob" → mediaJobWorkflow function di bawah
  * - "retry policy" → DEFAULT_ACTIVITY_OPTIONS dengan retry policy
@@ -10,10 +10,13 @@
  *   di Temporal server, jadi kalau worker crash, workflow resume dari titik
  *   terakhir saat worker baru tersedia (tidak mulai dari awal)
  *
+ * VF-4.1: Added AUDIO type handling for TTS voiceover generation.
+ *
  * Alur workflow:
  * 1. Update MediaAsset status → GENERATING
  * 2. Kalau type === 'IMAGE': panggil generateImage activity
  *    Kalau type === 'VIDEO_CLIP': panggil generateVideoClip activity
+ *    Kalau type === 'AUDIO': panggil generateVoiceover activity (VF-4.1)
  * 3. Update MediaAsset status → DONE (dengan resultUrl, cost, providerUsed)
  * 4. Kalau activity gagal (setelah retry habis): update status → FAILED
  *
@@ -121,6 +124,24 @@ export async function mediaJobWorkflow(
                 mediaAssetId: input.mediaAssetId,
                 keyframeUrl: input.keyframeUrl,
                 shotSpec: input.shotSpec,
+            });
+        } else if (input.type === 'AUDIO') {
+            // AUDIO butuh voiceProfile dari CharacterAsset (VF-4.1)
+            if (!input.voiceProfile) {
+                throw new Error(
+                    'AUDIO job requires voiceProfile — set CharacterAsset.voiceProfile first',
+                );
+            }
+            // AUDIO juga butuh dialogue di shotSpec
+            if (!input.shotSpec.dialogue) {
+                throw new Error(
+                    'AUDIO job requires shotSpec.dialogue — shot has no dialogue to synthesize',
+                );
+            }
+            result = await activities.generateVoiceover({
+                mediaAssetId: input.mediaAssetId,
+                shotSpec: input.shotSpec,
+                voiceProfile: input.voiceProfile,
             });
         } else {
             throw new Error(`Unsupported media type: ${input.type}`);

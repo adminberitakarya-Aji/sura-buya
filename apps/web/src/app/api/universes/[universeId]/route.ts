@@ -58,7 +58,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       data: {
         ...restData,
         ...(manifest !== undefined
-          ? { manifest: manifest as Prisma.InputJsonValue }
+          ? { manifest: manifest as any }
           : {}),
       },
     });

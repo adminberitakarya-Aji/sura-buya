@@ -26,13 +26,13 @@ export class CharacterAlreadyExistsError extends Error {
 
 /**
  * Konversi `voiceProfile` (Record<string, unknown> | null) ke tipe yang
- * diterima Prisma untuk kolom `Json?`. `undefined`/`null` → `Prisma.JsonNull`.
+ * diterima Prisma untuk kolom `Json?`. `undefined`/`null` → `null as any`.
  */
 function toNullableJson(
   value: Record<string, unknown> | null | undefined
-): Prisma.InputJsonValue | Prisma.NullTypes.JsonNull {
-  if (value === null || value === undefined) return Prisma.JsonNull;
-  return value as unknown as Prisma.InputJsonValue;
+): any {
+  if (value === null || value === undefined) return null as any;
+  return value as unknown as any;
 }
 
 /**

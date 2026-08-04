@@ -101,7 +101,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         await report(90, 'Menyimpan rencana season');
         await prisma.season.update({
           where: { id: season.id },
-          data: { plan: seasonPlan as unknown as Prisma.InputJsonValue },
+          data: { plan: seasonPlan as unknown as any },
         });
 
         return { plan: seasonPlan };

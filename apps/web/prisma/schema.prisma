@@ -239,7 +239,8 @@ model VideoProject {
   // schema lainnya karena video output punya biaya AI generation nyata, tidak boleh
   // terhapus ikut Character. User harus hapus VideoProject secara eksplisit dulu.
   character  Character    @relation(fields: [characterId], references: [id], onDelete: Restrict)
-  mediaAssets MediaAsset[] // VF-3.6 — reverse relasi
+  mediaAssets MediaAsset[] // VF-3.6
+  videoRenders VideoRender[] // VF-4.6 — reverse relasi
 
   @@index([universeId])
   // Cegah dua project klaim "episode 1" di series yang sama.
@@ -292,6 +293,43 @@ enum MediaJobStatus {
   DONE        // selesai, resultUrl terisi
   FAILED      // gagal setelah seluruh fallback chain habis
   RETRYING    // retry dalam progress (provider sama, attempt baru)
+}
+
+// ============================================================
+// VF-4.6 — AI Video Factory: VideoRender (final rendered video)
+// Menyimpan metadata video final yang sudah di-compose (VF-4.4/VF-4.5)
+// dan di-encode sesuai spec platform. Dipetakan dari VideoAsset type
+// di @suro-buya/shared (VF-1.1).
+//
+// Satu VideoProject bisa punya beberapa VideoRender (satu per platform
+// target — mis. satu untuk TIKTOK, satu untuk YOUTUBE_SHORTS dengan
+// safe zone berbeda). Tapi untuk MVP, biasanya satu render per project.
+// ============================================================
+
+model VideoRender {
+  id           String   @id @default(cuid())
+  projectId    String
+  videoUrl     String                 // URL video final (MP4) di storage
+  thumbnailUrl String?               // URL thumbnail (dari frame pertama atau yang dipilih)
+  duration     Float                  // durasi video dalam detik
+  resolution   String                // resolusi, mis. "1080x1920"
+  platform     PlatformTarget        // platform target (TIKTOK/YOUTUBE_SHORTS/INSTAGRAM_REELS)
+  codec        String   @default("h264")  // codec video, mis. "h264"
+  fileSizeBytes BigInt?               // ukuran file dalam bytes
+  timeline     Json?                  // VideoTimeline snapshot (VF-4.5) untuk audit/debug
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  project VideoProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+// VF-4.6 — platform target untuk VideoRender
+enum PlatformTarget {
+  TIKTOK
+  YOUTUBE_SHORTS
+  INSTAGRAM_REELS
 }
 
 model Region {

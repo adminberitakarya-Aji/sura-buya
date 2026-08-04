@@ -55,7 +55,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     const region = await prisma.region.create({
       data: {
         ...rest,
-        ...(metadata !== undefined ? { metadata: metadata as Prisma.InputJsonValue } : {}),
+        ...(metadata !== undefined ? { metadata: metadata as any } : {}),
         universeId: params.universeId,
       },
     });

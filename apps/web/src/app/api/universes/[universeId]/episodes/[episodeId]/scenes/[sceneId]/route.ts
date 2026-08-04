@@ -75,12 +75,12 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
           ? {
               validationReport:
                 validationReport === null
-                  ? Prisma.JsonNull
-                  : (validationReport as Prisma.InputJsonValue),
+                  ? null as any
+                  : (validationReport as any),
             }
           : {}),
         ...(metadata !== undefined
-          ? { metadata: metadata === null ? Prisma.JsonNull : (metadata as Prisma.InputJsonValue) }
+          ? { metadata: metadata === null ? null as any : (metadata as any) }
           : {}),
       },
     });

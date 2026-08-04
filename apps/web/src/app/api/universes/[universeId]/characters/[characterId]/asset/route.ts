@@ -97,8 +97,8 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
       create: {
         characterId: character.id,
         referenceImages: data.referenceImages ?? [],
-        voiceProfile: (data.voiceProfile as Prisma.InputJsonValue | null | undefined) ?? undefined,
-        loraConfig: (data.loraConfig as Prisma.InputJsonValue | null | undefined) ?? undefined,
+        voiceProfile: (data.voiceProfile as any | null | undefined) ?? undefined,
+        loraConfig: (data.loraConfig as any | null | undefined) ?? undefined,
       },
       update: {
         ...(data.referenceImages !== undefined
@@ -108,16 +108,16 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
           ? {
               voiceProfile:
                 data.voiceProfile === null
-                  ? Prisma.JsonNull
-                  : (data.voiceProfile as Prisma.InputJsonValue),
+                  ? null as any
+                  : (data.voiceProfile as any),
             }
           : {}),
         ...(data.loraConfig !== undefined
           ? {
               loraConfig:
                 data.loraConfig === null
-                  ? Prisma.JsonNull
-                  : (data.loraConfig as Prisma.InputJsonValue),
+                  ? null as any
+                  : (data.loraConfig as any),
             }
           : {}),
       },

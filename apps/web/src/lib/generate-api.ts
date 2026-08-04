@@ -43,9 +43,9 @@ export interface GenerationStatusResult {
 }
 
 export interface StartGenerationResult {
-  results: Array<{ shotIndex: number; type: string; asset: MediaAssetSummary }>;
-  totalCost: number;
-  summary: { total: number; done: number; failed: number; pending: number };
+  message: string;
+  started: Array<{ shotIndex: number; type: string; started: boolean }>;
+  totalShots: number;
 }
 
 /**

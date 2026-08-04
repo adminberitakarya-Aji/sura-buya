@@ -1,10 +1,10 @@
 /**
- * Suro-Buya Engine v2 - Media Providers (VF-1.4 + VF-3.1 + VF-3.3)
+ * Suro-Buya Engine v2 - Media Providers (VF-1.4 + VF-3.1 + VF-3.3 + VF-4.1)
  *
  * Skeleton interface + mock implementation (VF-1.4). Implementasi provider nyata:
  * - Image: Nano Banana 2 / Flux 2 Pro (VF-3.1) ✅
  * - Video: Kling 3.0 / Seedance 2 / Wan 2.7 (VF-3.3) ✅
- * - Voice: ElevenLabs / Cartesia (VF-4.1) — menyusul
+ * - Voice: ElevenLabs / Cartesia / IndoTTS (VF-4.1) ✅
  * Lihat IMPLEMENTATION-PLAN-VIDEO-FACTORY.md.
  */
 
@@ -13,3 +13,4 @@ export * from './mock-providers.js';
 export * from './registry.js';
 export * from './image-provider.js';
 export * from './video-provider.js';
+export * from './voice-provider.js';

@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
         slug: data.slug,
         name: data.name,
         description: data.description,
-        manifest: data.manifest as Prisma.InputJsonValue,
+        manifest: data.manifest as any,
         isPublic: data.isPublic,
         ownerId: userId,
         members: {
