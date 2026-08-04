@@ -15,6 +15,44 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+/**
+ * Shared mock untuk '../src/lib/db.js' — SATU registrasi untuk SELURUH file test.
+ *
+ * PENTING (perbaikan bug test — akar masalah "expected spy called 0 times"):
+ * Vitest meng-hoist SEMUA `vi.mock('../src/lib/db.js', factory)` di file ini
+ * ke SATU registrasi global untuk module path tersebut — mock kedua/ketiga
+ * yang didaftarkan di describe/beforeEach lain untuk path yang SAMA diam-diam
+ * MENGGANTIKAN yang pertama untuk SELURUH file, bukan cuma untuk test/describe
+ * block tempat dia ditulis. Sebelumnya file ini punya banyak `vi.mock('../src/lib/db.js', ...)`
+ * tersebar di banyak `it()`/`beforeEach()` — kebetulan tidak ketahuan sampai
+ * ditambah lagi mock baru untuk idempotency guard test, yang langsung
+ * membuat mock LAIN (termasuk yang sudah ada sebelumnya) berhenti dipakai.
+ *
+ * Solusi: SATU `vi.mock()` di module scope, dengan `vi.fn()` yang di-declare
+ * di luar factory (ditangkap via closure) — supaya setiap test bisa
+ * mengatur ulang behaviour-nya lewat `mockResolvedValueOnce()` tanpa perlu
+ * mendaftarkan factory baru.
+ */
+const mockFindUnique = vi.fn();
+const mockPrismaUpdate = vi.fn();
+vi.mock('../src/lib/db.js', () => ({
+    prisma: {
+        mediaAsset: {
+            findUnique: mockFindUnique,
+            update: mockPrismaUpdate,
+        },
+    },
+}));
+
+beforeEach(() => {
+    // Default: MediaAsset belum ada / belum DONE (null) — idempotency guard
+    // TIDAK short-circuit secara default, kecuali test tertentu meng-override
+    // dengan mockResolvedValueOnce(). Ini menjaga semua test lain (yang tidak
+    // peduli soal idempotency guard) berperilaku seperti sebelum perbaikan.
+    mockFindUnique.mockReset().mockResolvedValue(null);
+    mockPrismaUpdate.mockReset().mockResolvedValue({});
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. Config loading tests
 // ─────────────────────────────────────────────────────────────────────────────
@@ -167,7 +205,7 @@ describe('shared/interfaces: MediaJobWorkflowInput structure', () => {
                 index: 0,
                 duration: 3,
                 cameraAngle: 'close-up' as const,
-                dialogue: 'Halo, siapa kamu?',
+                dialogue: { characterId: 'char-suro', line: 'Halo, siapa kamu?' },
                 action: 'Character waves hand',
                 visualPrompt: 'Close-up of brave character, warm lighting',
                 motionPrompt: undefined,
@@ -247,16 +285,6 @@ describe('workflows/media-job: query and signal definitions', () => {
 
 describe('activities/index: all activities exported', () => {
     it('should export all required activities in activities object', async () => {
-        // Mock prisma untuk test tanpa DB connection
-        vi.mock('../src/lib/db.js', () => ({
-            prisma: {
-                mediaAsset: {
-                    update: vi.fn().mockResolvedValue({}),
-                    findUnique: vi.fn().mockResolvedValue(null),
-                },
-            },
-        }));
-
         const { activities } = await import('../src/activities/index.js');
 
         // Assert — semua activities yang dibutuhkan workflow terdaftar
@@ -266,17 +294,10 @@ describe('activities/index: all activities exported', () => {
     });
 
     it('should export getMediaAsset as named export', async () => {
-        vi.mock('../src/lib/db.js', () => ({
-            prisma: {
-                mediaAsset: {
-                    update: vi.fn().mockResolvedValue({}),
-                    findUnique: vi.fn().mockResolvedValue({
-                        id: 'asset-123',
-                        status: 'PENDING',
-                    }),
-                },
-            },
-        }));
+        mockFindUnique.mockResolvedValueOnce({
+            id: 'asset-123',
+            status: 'PENDING',
+        });
 
         const { getMediaAsset } = await import('../src/activities/index.js');
         expect(typeof getMediaAsset).toBe('function');
@@ -293,14 +314,6 @@ describe('activities/media-asset: updateMediaAssetStatus()', () => {
     });
 
     it('should call prisma.mediaAsset.update with correct status', async () => {
-        // Arrange — mock Prisma
-        const mockUpdate = vi.fn().mockResolvedValue({ id: 'asset-123', status: 'GENERATING' });
-        vi.mock('../src/lib/db.js', () => ({
-            prisma: {
-                mediaAsset: { update: mockUpdate },
-            },
-        }));
-
         const { updateMediaAssetStatus } = await import('../src/activities/media-asset.js');
 
         // Act
@@ -310,21 +323,13 @@ describe('activities/media-asset: updateMediaAssetStatus()', () => {
         });
 
         // Assert
-        expect(mockUpdate).toHaveBeenCalledWith({
+        expect(mockPrismaUpdate).toHaveBeenCalledWith({
             where: { id: 'asset-123' },
             data: { status: 'GENERATING' },
         });
     });
 
     it('should update all fields when DONE status with full result', async () => {
-        // Arrange
-        const mockUpdate = vi.fn().mockResolvedValue({ id: 'asset-456', status: 'DONE' });
-        vi.mock('../src/lib/db.js', () => ({
-            prisma: {
-                mediaAsset: { update: mockUpdate },
-            },
-        }));
-
         const { updateMediaAssetStatus } = await import('../src/activities/media-asset.js');
 
         // Act
@@ -338,7 +343,7 @@ describe('activities/media-asset: updateMediaAssetStatus()', () => {
         });
 
         // Assert — cost, url, provider semua masuk ke update
-        expect(mockUpdate).toHaveBeenCalledWith({
+        expect(mockPrismaUpdate).toHaveBeenCalledWith({
             where: { id: 'asset-456' },
             data: {
                 status: 'DONE',
@@ -351,14 +356,6 @@ describe('activities/media-asset: updateMediaAssetStatus()', () => {
     });
 
     it('should update lastError when FAILED status', async () => {
-        // Arrange
-        const mockUpdate = vi.fn().mockResolvedValue({ id: 'asset-789', status: 'FAILED' });
-        vi.mock('../src/lib/db.js', () => ({
-            prisma: {
-                mediaAsset: { update: mockUpdate },
-            },
-        }));
-
         const { updateMediaAssetStatus } = await import('../src/activities/media-asset.js');
 
         // Act
@@ -369,7 +366,7 @@ describe('activities/media-asset: updateMediaAssetStatus()', () => {
         });
 
         // Assert
-        expect(mockUpdate).toHaveBeenCalledWith({
+        expect(mockPrismaUpdate).toHaveBeenCalledWith({
             where: { id: 'asset-789' },
             data: {
                 status: 'FAILED',
@@ -379,14 +376,6 @@ describe('activities/media-asset: updateMediaAssetStatus()', () => {
     });
 
     it('should NOT include undefined fields in update data', async () => {
-        // Arrange
-        const mockUpdate = vi.fn().mockResolvedValue({ id: 'asset-001', status: 'RETRYING' });
-        vi.mock('../src/lib/db.js', () => ({
-            prisma: {
-                mediaAsset: { update: mockUpdate },
-            },
-        }));
-
         const { updateMediaAssetStatus } = await import('../src/activities/media-asset.js');
 
         // Act — hanya status diisi, yang lain undefined
@@ -397,7 +386,7 @@ describe('activities/media-asset: updateMediaAssetStatus()', () => {
         });
 
         // Assert — data hanya punya status + retryCount, tidak ada field undefined
-        const callArgs = mockUpdate.mock.calls[0]?.[0] as { data: Record<string, unknown> } | undefined;
+        const callArgs = mockPrismaUpdate.mock.calls[0]?.[0] as { data: Record<string, unknown> } | undefined;
         expect(callArgs?.data).not.toHaveProperty('providerUsed');
         expect(callArgs?.data).not.toHaveProperty('resultUrl');
         expect(callArgs?.data).not.toHaveProperty('cost');
@@ -416,6 +405,8 @@ describe('activities/media-generation: generateImage()', () => {
         // Pastikan tidak ada API key → pakai mock registry
         delete process.env['FAL_API_KEY'];
         delete process.env['GEMINI_API_KEY'];
+        // MediaAsset belum ada / belum DONE (default global beforeEach di atas)
+        // → idempotency guard tidak nge-short-circuit, activity lanjut generate seperti biasa.
     });
 
     it('should generate image and return MediaGenerationResult', async () => {
@@ -423,11 +414,12 @@ describe('activities/media-generation: generateImage()', () => {
 
         // Act
         const result = await generateImage({
+            mediaAssetId: 'asset-gen-1',
             shotSpec: {
                 index: 0,
                 duration: 3,
                 cameraAngle: 'close-up',
-                dialogue: 'Halo dunia!',
+                dialogue: { characterId: 'char-suro', line: 'Halo dunia!' },
                 action: 'Character waves',
                 visualPrompt: 'Close-up character waving, warm colors',
                 motionPrompt: undefined,
@@ -441,6 +433,7 @@ describe('activities/media-generation: generateImage()', () => {
         expect(result.providerAttempts).toBeInstanceOf(Array);
         expect(typeof result.cost).toBe('number');
         expect(result.cost).toBeGreaterThanOrEqual(0);
+        expect(result.fromCache).toBeFalsy();
     });
 
     it('should pass visualProfile reference images to provider', async () => {
@@ -448,6 +441,7 @@ describe('activities/media-generation: generateImage()', () => {
 
         // Act — dengan visualProfile (reference images)
         const result = await generateImage({
+            mediaAssetId: 'asset-gen-2',
             shotSpec: {
                 index: 1,
                 duration: 3,
@@ -473,6 +467,26 @@ describe('activities/media-generation: generateImage()', () => {
         expect(result.resultUrl).toBeDefined();
         expect(result.providerAttempts.length).toBeGreaterThan(0);
     });
+
+    it('should reject (non-retryable) when shotSpec fails style guide validation', async () => {
+        const { generateImage } = await import('../src/activities/media-generation.js');
+
+        // Act + Assert — visualPrompt kosong = violation 'error' di enforceStyleGuide (VF-3.2)
+        await expect(
+            generateImage({
+                mediaAssetId: 'asset-gen-invalid',
+                shotSpec: {
+                    index: 3,
+                    duration: 3,
+                    cameraAngle: 'close-up',
+                    dialogue: undefined,
+                    action: 'Character stands still',
+                    visualPrompt: '', // ← invalid, harus ditolak SEBELUM panggil provider
+                    motionPrompt: undefined,
+                },
+            }),
+        ).rejects.toThrow(/Style guide validation failed/);
+    });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -490,6 +504,7 @@ describe('activities/media-generation: generateVideoClip()', () => {
 
         // Act
         const result = await generateVideoClip({
+            mediaAssetId: 'asset-clip-1',
             keyframeUrl: 'https://storage.example.com/keyframe-shot-0.jpg',
             shotSpec: {
                 index: 0,
@@ -507,6 +522,7 @@ describe('activities/media-generation: generateVideoClip()', () => {
         expect(result.providerUsed).toBeDefined();
         expect(result.providerAttempts).toBeInstanceOf(Array);
         expect(typeof result.cost).toBe('number');
+        expect(result.fromCache).toBeFalsy();
     });
 
     it('should resolve motion preset from cameraAngle when motionPrompt is undefined', async () => {
@@ -514,12 +530,13 @@ describe('activities/media-generation: generateVideoClip()', () => {
 
         // Act — tanpa custom motionPrompt → resolveMotionPrompt pakai preset dari cameraAngle
         const result = await generateVideoClip({
+            mediaAssetId: 'asset-clip-2',
             keyframeUrl: 'https://storage.example.com/keyframe-shot-1.jpg',
             shotSpec: {
                 index: 1,
                 duration: 3,
                 cameraAngle: 'close-up',
-                dialogue: 'Aku siap!',
+                dialogue: { characterId: 'char-suro', line: 'Aku siap!' },
                 action: 'Character smiles confidently',
                 visualPrompt: 'Close-up confident character',
                 motionPrompt: undefined, // ← no custom prompt
@@ -537,14 +554,6 @@ describe('activities/media-generation: generateVideoClip()', () => {
 
 describe('VF-3.5 acceptance criteria: resume-on-crash idempotency', () => {
     it('updateMediaAssetStatus should be idempotent — retry same update is safe', async () => {
-        // Arrange — mock update yang bisa dipanggil berkali-kali
-        const mockUpdate = vi.fn().mockResolvedValue({ id: 'asset-idempotent', status: 'DONE' });
-        vi.mock('../src/lib/db.js', () => ({
-            prisma: {
-                mediaAsset: { update: mockUpdate },
-            },
-        }));
-
         const { updateMediaAssetStatus } = await import('../src/activities/media-asset.js');
 
         const update = {
@@ -560,36 +569,90 @@ describe('VF-3.5 acceptance criteria: resume-on-crash idempotency', () => {
         await updateMediaAssetStatus(update);
 
         // Assert — update dengan data sama, kedua panggilan aman
-        expect(mockUpdate).toHaveBeenCalledTimes(2);
-        expect(mockUpdate.mock.calls[0]).toEqual(mockUpdate.mock.calls[1]);
+        expect(mockPrismaUpdate).toHaveBeenCalledTimes(2);
+        expect(mockPrismaUpdate.mock.calls[0]).toEqual(mockPrismaUpdate.mock.calls[1]);
     });
 
-    it('generateImage should be idempotent — calling twice gives similar result', async () => {
+    it('generateImage should SKIP provider call and return cached result when MediaAsset already DONE', async () => {
         vi.resetModules();
         delete process.env['FAL_API_KEY'];
         delete process.env['GEMINI_API_KEY'];
 
+        // Arrange — MediaAsset SUDAH DONE dari attempt sebelumnya (simulasi:
+        // worker crash setelah provider sukses, Temporal retry activity ini).
+        // resultUrl sengaja beda pola dari mock provider ("mock-media.local")
+        // supaya kita bisa BUKTIKAN hasilnya benar-benar dari cache, bukan
+        // generate baru yang kebetulan sama.
+        mockFindUnique.mockResolvedValueOnce({
+            id: 'asset-already-done',
+            status: 'DONE',
+            resultUrl: 'https://cdn.surobuya.example/cached/asset-already-done.jpg',
+            providerUsed: 'nano-banana-2',
+            providerAttempts: ['nano-banana-2'],
+            cost: 0.015,
+        });
+
         const { generateImage } = await import('../src/activities/media-generation.js');
 
         const input = {
+            mediaAssetId: 'asset-already-done',
             shotSpec: {
                 index: 2,
                 duration: 3,
                 cameraAngle: 'extreme-close-up' as const,
-                dialogue: 'Tunggu!',
+                dialogue: { characterId: 'char-suro', line: 'Tunggu!' },
                 action: 'Character holds up hand',
                 visualPrompt: 'Extreme close-up of character face',
                 motionPrompt: undefined,
             },
         };
 
-        // Act — panggil dua kali (Temporal re-execute scenario)
-        const result1 = await generateImage(input);
-        const result2 = await generateImage(input);
+        // Act
+        const result = await generateImage(input);
 
-        // Assert — kedua panggilan berhasil dengan struktur yang sama
-        expect(result1.resultUrl).toBeDefined();
-        expect(result2.resultUrl).toBeDefined();
-        // Both return valid URLs — idempotent dari sudut pandang "tidak error saat di-retry"
+        // Assert — hasil PERSIS dari DB (bukan URL baru dari mock provider),
+        // dan ditandai fromCache: true. Ini membuktikan provider TIDAK
+        // dipanggil ulang — inti dari perbaikan idempotency guard.
+        expect(result.fromCache).toBe(true);
+        expect(result.resultUrl).toBe(
+            'https://cdn.surobuya.example/cached/asset-already-done.jpg',
+        );
+        expect(result.cost).toBe(0.015);
+        expect(mockFindUnique).toHaveBeenCalledWith(
+            expect.objectContaining({ where: { id: 'asset-already-done' } }),
+        );
+    });
+
+    it('generateImage should proceed to generate normally when MediaAsset is still GENERATING (not DONE)', async () => {
+        vi.resetModules();
+        delete process.env['FAL_API_KEY'];
+        delete process.env['GEMINI_API_KEY'];
+
+        // Arrange — status GENERATING (retry sebelum provider selesai) → guard
+        // tidak boleh menganggap ini "selesai", harus tetap generate.
+        mockFindUnique.mockResolvedValueOnce({
+            id: 'asset-in-progress',
+            status: 'GENERATING',
+            resultUrl: null,
+        });
+
+        const { generateImage } = await import('../src/activities/media-generation.js');
+
+        const result = await generateImage({
+            mediaAssetId: 'asset-in-progress',
+            shotSpec: {
+                index: 4,
+                duration: 3,
+                cameraAngle: 'wide-shot' as const,
+                dialogue: undefined,
+                action: 'Character looks around',
+                visualPrompt: 'Wide shot character looking around',
+                motionPrompt: undefined,
+            },
+        });
+
+        // Assert — generate baru betulan jalan (bukan short-circuit)
+        expect(result.fromCache).toBeFalsy();
+        expect(result.resultUrl).toContain('mock-media.local');
     });
 });

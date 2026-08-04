@@ -22,7 +22,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
     TestWorkflowEnvironment,
-    type MockActivityEnvironment,
 } from '@temporalio/testing';
 import { Worker, Runtime, DefaultLogger } from '@temporalio/worker';
 import { mediaJobWorkflow, getStatus, cancelSignal } from '../src/workflows/index.js';
@@ -81,7 +80,7 @@ function buildImageJobInput(
             index: 0,
             duration: 3,
             cameraAngle: 'close-up',
-            dialogue: 'Halo dunia!',
+            dialogue: { characterId: 'char-suro', line: 'Halo dunia!' },
             action: 'Character waves hand',
             visualPrompt: 'Close-up brave character, warm lighting, 9:16',
             motionPrompt: undefined,

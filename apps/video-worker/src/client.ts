@@ -30,7 +30,9 @@ let clientInstance: Client | null = null;
 async function getClient(): Promise<Client> {
     if (!clientInstance) {
         const config = loadConfig();
-        clientInstance = await createTemporalClient(config);
+        // createTemporalClient() butuh TemporalConfig (address/namespace/...),
+        // bukan WorkerConfig penuh — TemporalConfig ada di config.temporal.
+        clientInstance = await createTemporalClient(config.temporal);
     }
     return clientInstance;
 }

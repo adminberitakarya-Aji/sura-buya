@@ -19,8 +19,17 @@ export default defineConfig({
         // Node environment — Temporal tidak bisa di browser
         environment: 'node',
 
-        // Test files
+        // Test files — unit tests dijalankan oleh `pnpm test` (default).
+        // Temporal workflow integration test (vf35-temporal-workflow.test.ts)
+        // di-exclude dari default run karena:
+        // 1. Membutuhkan @temporalio/testing yang menarik @grpc/grpc-js — package
+        //    yang menyertakan raw TypeScript (src/*.ts) di samping compiled JS
+        //    (build/src/*.js). Resolver Vite salah pilih .ts file → SyntaxError.
+        // 2. TestWorkflowEnvironment startup membutuhkan waktu ~10-30 detik.
+        //
+        // Temporal workflow test dijalankan terpisah via `pnpm test:temporal`.
         include: ['tests/**/*.test.ts'],
+        exclude: ['tests/vf35-temporal-workflow.test.ts', '**/node_modules/**', '**/dist/**'],
 
         // Timeout lebih panjang untuk Temporal integration tests
         // TestWorkflowEnvironment.createLocal() butuh ~10-30 detik startup
@@ -28,7 +37,7 @@ export default defineConfig({
         hookTimeout: 90_000,   // 90 detik untuk beforeAll (TestWorkflowEnvironment startup)
 
         // Vitest reporter
-        reporter: 'verbose',
+        reporters: ['verbose'],
 
         // Coverage (opsional — diaktifkan via --coverage flag)
         coverage: {
@@ -41,7 +50,7 @@ export default defineConfig({
         // Module isolation — penting untuk mock vi.mock() di unit tests
         // clearMocks: reset setelah setiap test
         clearMocks: true,
-        resetMocks: false, // false agar vi.resetModules() di test bisa dipanggil manual
+        mockReset: false, // false agar vi.resetModules() di test bisa dipanggil manual
 
         // Pool — forks agar setiap test file punya isolated module scope
         // Penting untuk vi.resetModules() dan dynamic import di unit tests

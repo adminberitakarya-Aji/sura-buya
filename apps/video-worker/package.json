@@ -12,6 +12,7 @@
     "build": "tsc -b",
     "start": "node dist/index.js",
     "test": "vitest run",
+    "test:temporal": "vitest run tests/vf35-temporal-workflow.test.ts",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate"

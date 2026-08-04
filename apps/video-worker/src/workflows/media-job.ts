@@ -27,22 +27,18 @@
  */
 
 import { proxyActivities, defineQuery, defineSignal, setHandler } from '@temporalio/workflow';
+import { ApplicationFailure } from '@temporalio/common';
 import type { MediaJobActivities, MediaJobWorkflowInput, MediaGenerationResult } from '../shared/interfaces.js';
+import { DEFAULT_ACTIVITY_OPTIONS } from '../config.js';
 
 /**
  * Activity proxy — memanggil activities via Temporal.
- * startToCloseTimeout: 5 menit (media gen bisa lambat)
- * retry: DEFAULT_RETRY_POLICY (3 attempts, exponential backoff)
+ * Pakai DEFAULT_ACTIVITY_OPTIONS dari config.ts (satu sumber kebenaran untuk
+ * timeout & retry policy) — sebelumnya nilai ini di-hardcode ulang di sini
+ * secara terpisah dari config.ts, berisiko drift kalau salah satu diubah
+ * tanpa mengubah yang lain (lihat AUDIT-FINAL-REPORT.md).
  */
-const activities = proxyActivities<MediaJobActivities>({
-    startToCloseTimeout: '5 minutes',
-    retry: {
-        maximumAttempts: 3,
-        initialInterval: 1000,
-        maximumInterval: 30000,
-        backoffCoefficient: 2.0,
-    },
-});
+const activities = proxyActivities<MediaJobActivities>(DEFAULT_ACTIVITY_OPTIONS);
 
 /**
  * Query untuk cek status workflow dari client (apps/web API route di VF-3.7).
@@ -109,6 +105,7 @@ export async function mediaJobWorkflow(
 
         if (input.type === 'IMAGE') {
             result = await activities.generateImage({
+                mediaAssetId: input.mediaAssetId,
                 shotSpec: input.shotSpec,
                 visualProfile: input.visualProfile,
                 artStyle: input.artStyle,
@@ -121,6 +118,7 @@ export async function mediaJobWorkflow(
                 );
             }
             result = await activities.generateVideoClip({
+                mediaAssetId: input.mediaAssetId,
                 keyframeUrl: input.keyframeUrl,
                 shotSpec: input.shotSpec,
             });
@@ -156,9 +154,28 @@ export async function mediaJobWorkflow(
         status = 'FAILED';
         const errorMessage = err instanceof Error ? err.message : String(err);
 
+        // Ekstrak providerAttempts kalau activity gagal karena
+        // MediaChainExhaustedError (lihat rethrowChainExhausted() di
+        // media-generation.ts). Saat Activity gagal, ActivityFailure yang
+        // dilempar ke workflow punya `.cause` berisi ApplicationFailure asli
+        // — dan `.details[0]` adalah riwayat percobaan yang kita simpan di
+        // sana. Tanpa ini, providerAttempts hilang total di jalur FAILED
+        // (lihat AUDIT-FINAL-REPORT.md) — kita cuma tahu "gagal", bukan
+        // provider mana saja yang sudah dicoba dan kenapa.
+        const cause =
+            err && typeof err === 'object' && 'cause' in err
+                ? (err as { cause?: unknown }).cause
+                : undefined;
+        const attempts =
+            cause instanceof ApplicationFailure && Array.isArray(cause.details?.[0])
+                ? (cause.details[0] as { providerName: string; error: string }[])
+                : undefined;
+        const providerAttempts = attempts?.map((a) => a.providerName);
+
         await activities.updateMediaAssetStatus({
             mediaAssetId: input.mediaAssetId,
             status: 'FAILED',
+            providerAttempts,
             lastError: errorMessage,
         });
 

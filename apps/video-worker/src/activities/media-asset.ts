@@ -65,8 +65,12 @@ export async function updateMediaAssetStatus(
 }
 
 /**
- * Baca MediaAsset dari database — dipakai workflow untuk cek status awal.
- * Tidak dipakai di activity interface, tapi berguna untuk debugging/testing.
+ * Baca MediaAsset dari database.
+ *
+ * Dipakai oleh idempotency guard di media-generation.ts (checkAlreadyDone) —
+ * cek status sebelum generate ulang. Bukan bagian dari MediaJobActivities
+ * interface Temporal (dipanggil langsung sebagai fungsi biasa dalam proses
+ * activity yang sama, bukan di-proxy lewat workflow).
  */
 export async function getMediaAsset(mediaAssetId: string) {
     return prisma.mediaAsset.findUnique({

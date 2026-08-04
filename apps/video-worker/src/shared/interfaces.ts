@@ -16,8 +16,12 @@ import type { ShotSpec, CharacterVisualProfile, MediaAssetType } from '@suro-buy
  * Input untuk MediaJob workflow.
  *
  * Dikirim oleh client (apps/web API route di VF-3.7) saat memulai workflow.
- * Berisi semua data yang dibutuhkan untuk generate satu media asset per shot —
- * tidak perlu query DB lagi di activity (idempotent, bisa di-retry tanpa side-effect).
+ * Berisi semua data yang dibutuhkan untuk generate satu media asset per shot.
+ *
+ * CATATAN (perbaikan audit VF-3, idempotency guard): activity generate TETAP
+ * query DB (lewat mediaAssetId) di awal eksekusi untuk cek apakah asset ini
+ * SUDAH selesai di attempt sebelumnya — bukan "tidak perlu query DB lagi"
+ * seperti komentar lama di sini. Lihat media-generation.ts checkAlreadyDone().
  */
 export interface MediaJobWorkflowInput {
     /** ID MediaAsset di Prisma (VF-3.6) — di-update sepanjang workflow */
@@ -69,6 +73,12 @@ export interface MediaGenerationResult {
     providerAttempts: string[];
     /** Biaya generate dalam USD */
     cost: number;
+    /**
+     * true kalau hasil ini diambil dari MediaAsset yang sudah DONE sebelumnya
+     * (idempotency guard) — TIDAK ada panggilan provider baru, TIDAK ada
+     * biaya baru dikenakan. false/undefined = generate baru sungguhan.
+     */
+    fromCache?: boolean;
 }
 
 /**
@@ -99,8 +109,15 @@ export interface MediaJobActivities {
     /**
      * Generate keyframe image untuk satu shot.
      * Memakai ImageProvider registry (VF-3.1) dengan fallback chain.
+     *
+     * @param input.mediaAssetId Dipakai untuk idempotency guard — activity
+     *   cek dulu status MediaAsset ini di DB sebelum memanggil provider.
+     *   Kalau sudah DONE, return hasil lama tanpa generate ulang (mencegah
+     *   double-billing kalau Temporal retry activity ini setelah crash
+     *   pasca-provider-sukses-tapi-sebelum-tercatat-selesai).
      */
     generateImage(input: {
+        mediaAssetId: string;
         shotSpec: ShotSpec;
         visualProfile?: Omit<CharacterVisualProfile, 'characterId'>;
         artStyle?: string;
@@ -109,8 +126,11 @@ export interface MediaJobActivities {
     /**
      * Generate video clip (image-to-video) untuk satu shot.
      * Memakai VideoProvider registry (VF-3.3) dengan fallback chain.
+     *
+     * @param input.mediaAssetId Sama seperti generateImage — idempotency guard.
      */
     generateVideoClip(input: {
+        mediaAssetId: string;
         keyframeUrl: string;
         shotSpec: ShotSpec;
     }): Promise<MediaGenerationResult>;
