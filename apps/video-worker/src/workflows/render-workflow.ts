@@ -21,7 +21,7 @@
  * - Retry policy: 3 attempts dengan exponential backoff
  */
 
-import { proxyActivities, defineQuery, defineSignal, setHandler } from '@temporalio/workflow';
+import { proxyActivities, defineQuery, defineSignal, setHandler, ApplicationFailure } from '@temporalio/workflow';
 import type { RenderWorkflowInput, RenderWorkflowResult, RenderJobStatus } from '../shared/render-interfaces.js';
 import { DEFAULT_RENDER_ACTIVITY_OPTIONS } from '../config.js';
 
@@ -223,7 +223,9 @@ export async function renderWorkflow(
 
     let currentPlatform: string | null = null;
 
-    // Helper: cek cancel dan throw kalau sudah
+    // Helper: cek cancel dan throw kalau sudah.
+    // Pakai ApplicationFailure.nonRetryable supaya Temporal tidak retry
+    // workflow task ini — cancel adalah intentional, bukan transient error.
     const checkCancelled = async (): Promise<void> => {
         if (cancelled) {
             status = 'CANCELLED';
@@ -232,7 +234,7 @@ export async function renderWorkflow(
                 status: 'FAILED',
                 lastError: 'Cancelled by user',
             });
-            throw new Error('Workflow cancelled by user');
+            throw ApplicationFailure.nonRetryable('Cancelled by user');
         }
     };
 
@@ -325,7 +327,16 @@ export async function renderWorkflow(
                 platforms: platformResults,
             };
         } catch (err) {
-            lastError = err instanceof Error ? err.message : String(err);
+            // Cancellation: re-throw langsung tanpa retry — cancel adalah
+            // intentional, bukan error yang perlu di-retry.
+            if (cancelled) {
+                throw err;
+            }
+
+            // Temporal wraps activity errors in ActivityFailure — extract the
+            // original cause message untuk error reporting yang meaningful.
+            const causeMessage = (err as { cause?: { message?: string } })?.cause?.message;
+            lastError = causeMessage ?? (err instanceof Error ? err.message : String(err));
 
             // Update VideoRenderJob → FAILED
             await activities.upsertVideoRenderJob({

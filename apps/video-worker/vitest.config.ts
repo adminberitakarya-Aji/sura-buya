@@ -20,16 +20,22 @@ export default defineConfig({
         environment: 'node',
 
         // Test files — unit tests dijalankan oleh `pnpm test` (default).
-        // Temporal workflow integration test (vf35-temporal-workflow.test.ts)
-        // di-exclude dari default run karena:
+        // Temporal workflow integration test (vf35-temporal-workflow.test.ts,
+        // vf46-render-workflow.test.ts) di-exclude dari default run karena:
         // 1. Membutuhkan @temporalio/testing yang menarik @grpc/grpc-js — package
         //    yang menyertakan raw TypeScript (src/*.ts) di samping compiled JS
         //    (build/src/*.js). Resolver Vite salah pilih .ts file → SyntaxError.
         // 2. TestWorkflowEnvironment startup membutuhkan waktu ~10-30 detik.
         //
-        // Temporal workflow test dijalankan terpisah via `pnpm test:temporal`.
+        // Temporal workflow test dijalankan terpisah via `pnpm test:temporal`
+        // dan `pnpm test:render-temporal`.
         include: ['tests/**/*.test.ts'],
-        exclude: ['tests/vf35-temporal-workflow.test.ts', '**/node_modules/**', '**/dist/**'],
+        exclude: [
+            'tests/vf35-temporal-workflow.test.ts',
+            'tests/vf46-render-workflow.test.ts',
+            '**/node_modules/**',
+            '**/dist/**',
+        ],
 
         // Timeout lebih panjang untuk Temporal integration tests
         // TestWorkflowEnvironment.createLocal() butuh ~10-30 detik startup
