@@ -122,6 +122,7 @@ enum VideoStatus {
   SCRIPTED        // script sudah digenerate (VF-2.2)
   STORYBOARDED    // storyboard sudah digenerate (VF-2.5)
   GENERATING      // visual/motion/audio sedang digenerate (VF-3/4)
+  RENDERING       // video final sedang di-compose/render via Remotion+FFmpeg (VF-4.7)
   RENDERED        // video final sudah di-compose (VF-4)
   REVIEWED        // lolos canon + safety review (VF-5)
   EXPORTED        // sudah di-export siap upload (VF-5)
@@ -307,22 +308,60 @@ enum MediaJobStatus {
 // ============================================================
 
 model VideoRender {
-  id           String   @id @default(cuid())
-  projectId    String
-  videoUrl     String                 // URL video final (MP4) di storage
-  thumbnailUrl String?               // URL thumbnail (dari frame pertama atau yang dipilih)
-  duration     Float                  // durasi video dalam detik
-  resolution   String                // resolusi, mis. "1080x1920"
-  platform     PlatformTarget        // platform target (TIKTOK/YOUTUBE_SHORTS/INSTAGRAM_REELS)
-  codec        String   @default("h264")  // codec video, mis. "h264"
-  fileSizeBytes BigInt?               // ukuran file dalam bytes
-  timeline     Json?                  // VideoTimeline snapshot (VF-4.5) untuk audit/debug
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String        @id @default(cuid())
+  projectId     String
+  videoUrl      String
+  thumbnailUrl  String?
+  duration      Float
+  width         Int                              // terpisah untuk query efisien
+  height        Int                              // terpisah untuk query efisien
+  resolution    String   @default("")            // backward compat display (e.g. "1080x1920")
+  platform      PlatformTarget[]                 // array untuk multi-platform render
+  codec         String   @default("h264")
+  fileSizeBytes BigInt?                          // ukuran file dalam bytes
+  status        RenderStatus @default(PENDING)   // PENDING/RENDERING/DONE/FAILED
+  metadata      Json?                            // generic: timeline, encodingParams, watermarkConfig, dll.
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  project VideoProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project       VideoProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  renderJobs    VideoRenderJob[]                 // tracking percobaan render
 
   @@index([projectId])
+  @@index([projectId, status])                   // query efisien by status
+}
+
+model VideoRenderJob {
+  id            String           @id @default(cuid())
+  renderId      String
+  attemptNumber Int              @default(1)
+  providerUsed  String
+  status        RenderJobStatus  @default(PENDING)
+  startedAt     DateTime?
+  completedAt   DateTime?
+  error         String?          @db.Text
+  cost          Float?
+  metadata      Json?
+
+  render        VideoRender @relation(fields: [renderId], references: [id], onDelete: Cascade)
+
+  @@index([renderId])
+  @@index([renderId, attemptNumber])
+}
+
+enum RenderStatus {
+  PENDING
+  RENDERING
+  DONE
+  FAILED
+}
+
+enum RenderJobStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+  CANCELLED
 }
 
 // VF-4.6 — platform target untuk VideoRender

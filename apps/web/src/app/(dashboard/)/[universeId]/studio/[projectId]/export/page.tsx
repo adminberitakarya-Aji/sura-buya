@@ -7,7 +7,6 @@
  * - Preview video hasil export
  * - Lihat metadata (durasi, resolusi, codec, file size)
  * - Retry failed renders
- * - Track progress per attempt
  */
 
 'use client';
@@ -16,8 +15,87 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { studioApi } from '@/lib/api-client';
-import { exportApi, type VideoRenderSummary, type RenderJobSummary } from '@/lib/export-api';
-import { Sparkles, Download, AlertCircle, CheckCircle, Film, Smartphone, Youtube, Instagram, Loader, RotateCcw, XCircle, Clock, PlayCircle } from 'lucide-react';
+import { exportApi, type VideoRenderSummary, type ExportResult, type RetryResult, type PlatformTarget } from '@/lib/export-api';
+import { Sparkles, Download, AlertCircle, CheckCircle, Film, Smartphone, Youtube, Instagram, Loader, RotateCcw, Clock, XCircle, WifiOff } from 'lucide-react';
+
+function getStatusBadge(status: string) {
+  switch (status) {
+    case 'PENDING':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
+          <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-pulse" />
+          PENDING
+        </span>
+      );
+    case 'RENDERING':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+          <Loader className="h-3 w-3 animate-spin" />
+          RENDERING
+        </span>
+      );
+    case 'DONE':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
+          <CheckCircle className="h-3 w-3" />
+          DONE
+        </span>
+      );
+    case 'FAILED':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
+          <XCircle className="h-3 w-3" />
+          FAILED
+        </span>
+      );
+    default:
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
+          {status}
+        </span>
+      );
+  }
+}
+
+function getStatusIcon(status: string) {
+  switch (status) {
+    case 'PENDING':
+      return <Clock className="h-4 w-4 text-gray-500" />;
+    case 'RENDERING':
+      return <Loader className="h-4 w-4 text-blue-500 animate-spin" />;
+    case 'DONE':
+      return <CheckCircle className="h-4 w-4 text-green-500" />;
+    case 'FAILED':
+      return <XCircle className="h-4 w-4 text-red-500" />;
+    default:
+      return <WifiOff className="h-4 w-4 text-gray-500" />;
+  }
+}
+
+function PlatformIcon({ platform }: { platform: PlatformTarget }) {
+  switch (platform) {
+    case 'TIKTOK':
+      return <Smartphone className="h-4 w-4" />;
+    case 'YOUTUBE_SHORTS':
+      return <Youtube className="h-4 w-4" />;
+    case 'INSTAGRAM_REELS':
+      return <Instagram className="h-4 w-4" />;
+  }
+}
+
+function PlatformBadge({ platform }: { platform: PlatformTarget }) {
+  const labels: Record<PlatformTarget, string> = {
+    TIKTOK: 'TikTok',
+    YOUTUBE_SHORTS: 'YouTube Shorts',
+    INSTAGRAM_REELS: 'Instagram Reels',
+  };
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+      <PlatformIcon platform={platform} />
+      {labels[platform]}
+    </span>
+  );
+}
 
 export default function ExportPage() {
   const params = useParams();
@@ -25,20 +103,26 @@ export default function ExportPage() {
   const projectId = params.projectId as string;
   const queryClient = useQueryClient();
 
-  const [selectedPlatform, setSelectedPlatform] = useState<'TIKTOK' | 'YOUTUBE_SHORTS' | 'INSTAGRAM_REELS'>('TIKTOK');
+  const [selectedPlatform, setSelectedPlatform] = useState<PlatformTarget>('TIKTOK');
 
   const { data: projectData, isLoading: projectLoading } = useQuery({
     queryKey: ['studio-project', universeId, projectId],
     queryFn: () => studioApi.getProject(universeId, projectId),
   });
 
-  const { data: exportData, isLoading: exportLoading } = useQuery({
+  const { data: exportData, isLoading: exportLoading, refetch: refetchExports } = useQuery({
     queryKey: ['export-status', universeId, projectId],
     queryFn: () => exportApi.getExportStatus(universeId, projectId),
+    refetchInterval: (query) => {
+      // Auto-refetch every 5s if any render is still PENDING or RENDERING
+      const data = query.state.data;
+      const hasActive = data?.renders.some((r: { status: string }) => r.status === 'PENDING' || r.status === 'RENDERING');
+      return hasActive ? 5000 : false;
+    },
   });
 
   const exportMutation = useMutation({
-    mutationFn: (platform: 'TIKTOK' | 'YOUTUBE_SHORTS' | 'INSTAGRAM_REELS') =>
+    mutationFn: (platform: PlatformTarget) =>
       exportApi.exportVideo(universeId, projectId, platform),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['export-status', universeId, projectId] });
@@ -47,9 +131,11 @@ export default function ExportPage() {
   });
 
   const retryMutation = useMutation({
-    mutationFn: (renderId: string) => exportApi.retryRender(universeId, projectId, renderId),
+    mutationFn: (renderId: string) =>
+      exportApi.retryRender(universeId, projectId, renderId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['export-status', universeId, projectId] });
+      refetchExports();
+      queryClient.invalidateQueries({ queryKey: ['studio-project', universeId, projectId] });
     },
   });
 
@@ -161,7 +247,7 @@ export default function ExportPage() {
           {exportMutation.isSuccess && (
             <div className="rounded-md bg-green-50 p-3 text-sm text-green-700 flex items-center gap-2">
               <CheckCircle className="h-4 w-4" />
-              Video berhasil di-export!
+              Video render started! Status akan diperbarui otomatis.
             </div>
           )}
         </div>
@@ -175,7 +261,12 @@ export default function ExportPage() {
           <h3 className="font-semibold">Renders ({renders.length})</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {renders.map((render) => (
-              <RenderCard key={render.id} render={render} onRetry={() => retryMutation.mutate(render.id)} isRetrying={retryMutation.isPending && retryMutation.variables === render.id} />
+              <RenderCard
+                key={render.id}
+                render={render}
+                onRetry={retryMutation.mutate}
+                isRetrying={retryMutation.isPending && retryMutation.variables === render.id}
+              />
             ))}
           </div>
         </div>
@@ -220,19 +311,15 @@ function PlatformCard({
   );
 }
 
-function RenderCard({
-  render,
-  onRetry,
-  isRetrying,
-}: {
-  render: VideoRenderSummary;
-  onRetry: () => void;
+interface RenderCardProps {
+  render: VideoRenderSummary & { status: string; width: number; height: number; workflowId: string; platform: PlatformTarget[] };
+  onRetry: (renderId: string) => void;
   isRetrying: boolean;
-}) {
-  const statusConfig = getStatusConfig(render.status);
-  const currentAttempt = render.renderJobs?.length ?? 0;
-  const maxAttempts = 3;
-  const progress = currentAttempt > 0 ? Math.min((currentAttempt / maxAttempts) * 100, 100) : 0;
+}
+
+function RenderCard({ render, onRetry, isRetrying }: RenderCardProps) {
+  const platform = render.platform[0];
+  const canRetry = render.status === 'FAILED' && !isRetrying;
 
   return (
     <div className="rounded-lg border overflow-hidden">
@@ -241,7 +328,7 @@ function RenderCard({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={render.thumbnailUrl}
-            alt={`Render ${render.platform}`}
+            alt={`Render ${platform}`}
             className="w-full h-full object-cover"
           />
         ) : (
@@ -250,102 +337,80 @@ function RenderCard({
           </div>
         )}
         {/* Status Badge Overlay */}
-        <div className="absolute top-2 left-2 right-2">
-          <span className={statusConfig.badgeClass}>
-            <statusConfig.icon className="h-3 w-3" />
-            {statusConfig.label}
-          </span>
+        <div className="absolute top-2 left-2 right-2 flex justify-between">
+          <div className="flex gap-1">
+            {render.platform.map((p, i) => (
+              <PlatformBadge key={i} platform={p} />
+            ))}
+          </div>
+          <div className="flex justify-end">
+            {getStatusBadge(render.status)}
+          </div>
         </div>
+        {/* Progress indicator for RENDERING */}
+        {render.status === 'RENDERING' && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-800">
+            <div className="h-full bg-blue-500 animate-pulse" style={{ width: '50%' }} />
+          </div>
+        )}
       </div>
-      <div className="p-3 space-y-3">
-        {/* Header: Platform badges + Resolution */}
-        <div className="flex flex-wrap items-center gap-2">
-          {render.platform.map((p, i) => (
-            <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
-              {p.replace('_', ' ')}
-            </span>
-          ))}
-          <span className="ml-auto text-xs text-muted-foreground font-mono">
-            {render.width}×{render.height}
-          </span>
+      <div className="p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="font-medium text-sm">{platform.replace('_', ' ')}</span>
+          <span className="text-xs text-muted-foreground">{render.width}×{render.height}</span>
         </div>
-
-        {/* Metadata */}
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span>{render.duration.toFixed(1)}s</span>
-          <span>{render.codec.toUpperCase()}</span>
+          <span>{render.codec}</span>
           {render.fileSizeBytes && (
             <span>{(Number(render.fileSizeBytes) / 1024 / 1024).toFixed(1)} MB</span>
           )}
         </div>
-
-        {/* Progress Bar for rendering attempts */}
-        {(render.status === 'RENDERING' || render.status === 'PENDING' || render.status === 'FAILED') && currentAttempt > 0 && (
-          <div className="space-y-1">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Attempt {currentAttempt} / {maxAttempts}</span>
-              <span className="font-medium">{progress.toFixed(0)}%</span>
-            </div>
-            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all duration-300 ${statusConfig.progressClass}`}
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            {render.renderJobs && render.renderJobs.length > 0 && (
-              <div className="text-xs text-muted-foreground">
-                Latest: Attempt {render.renderJobs[0].attemptNumber} — {render.renderJobs[0].status}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Download / Retry Actions */}
+        
+        {/* Action Buttons */}
         <div className="flex items-center gap-2 pt-2 border-t">
           {render.status === 'DONE' && render.videoUrl && (
             <a
               href={render.videoUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs font-medium text-blue-600 hover:underline"
+              className="flex-1 inline-flex items-center justify-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
             >
-              <Download className="h-3.5 w-3.5" />
+              <Download className="h-3 w-3" />
               Download MP4
             </a>
           )}
+          
           {render.status === 'FAILED' && (
             <button
-              onClick={onRetry}
-              disabled={isRetrying || currentAttempt >= maxAttempts}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-600 bg-orange-50 rounded-md hover:bg-orange-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => onRetry(render.id)}
+              disabled={isRetrying}
+              className="flex-1 inline-flex items-center justify-center gap-1 rounded-md border border-red-300 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
             >
               {isRetrying ? (
                 <>
-                  <Loader className="h-3.5 w-3.5 animate-spin" />
+                  <Loader className="h-3 w-3 animate-spin" />
                   Retrying...
-                </>
-              ) : currentAttempt >= maxAttempts ? (
-                <>
-                  <XCircle className="h-3.5 w-3.5" />
-                  Max retries reached
                 </>
               ) : (
                 <>
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  Retry Failed
+                  <RotateCcw className="h-3 w-3" />
+                  Retry
                 </>
               )}
             </button>
           )}
+          
           {render.status === 'PENDING' && (
-            <span className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-              <Clock className="h-3.5 w-3.5 animate-pulse" />
-              Queued
+            <span className="flex-1 text-center text-xs text-muted-foreground">
+              <Clock className="h-3 w-3 inline mr-1" />
+              Menunggu antrian...
             </span>
           )}
+          
           {render.status === 'RENDERING' && (
-            <span className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs text-blue-600">
-              <PlayCircle className="h-3.5 w-3.5 animate-spin" />
+            <span className="flex-1 text-center text-xs text-blue-600">
+              <Loader className="h-3 w-3 inline animate-spin mr-1" />
               Rendering...
             </span>
           )}
@@ -353,44 +418,4 @@ function RenderCard({
       </div>
     </div>
   );
-}
-
-function getStatusConfig(status: string) {
-  switch (status) {
-    case 'PENDING':
-      return {
-        label: 'PENDING',
-        icon: Clock,
-        badgeClass: 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800',
-        progressClass: 'bg-yellow-500',
-      };
-    case 'RENDERING':
-      return {
-        label: 'RENDERING',
-        icon: Loader,
-        badgeClass: 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800',
-        progressClass: 'bg-blue-500',
-      };
-    case 'DONE':
-      return {
-        label: 'DONE',
-        icon: CheckCircle,
-        badgeClass: 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800',
-        progressClass: 'bg-green-500',
-      };
-    case 'FAILED':
-      return {
-        label: 'FAILED',
-        icon: XCircle,
-        badgeClass: 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800',
-        progressClass: 'bg-red-500',
-      };
-    default:
-      return {
-        label: status,
-        icon: AlertCircle,
-        badgeClass: 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800',
-        progressClass: 'bg-gray-500',
-      };
-  }
 }

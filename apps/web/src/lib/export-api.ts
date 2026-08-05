@@ -6,16 +6,31 @@
 
 export type PlatformTarget = 'TIKTOK' | 'YOUTUBE_SHORTS' | 'INSTAGRAM_REELS';
 
+export interface RenderJobSummary {
+  id: string;
+  attemptNumber: number;
+  status: string;
+  providerUsed: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  error: string | null;
+}
+
 export interface VideoRenderSummary {
   id: string;
   videoUrl: string;
   thumbnailUrl: string | null;
   duration: number;
+  width: number;
+  height: number;
   resolution: string;
-  platform: PlatformTarget;
+  platform: PlatformTarget[];
   codec: string;
+  status: string;
   fileSizeBytes: bigint | null;
   createdAt: string;
+  workflowId: string;
+  renderJobs: RenderJobSummary[];
 }
 
 export interface ExportStatusResult {
@@ -26,16 +41,25 @@ export interface ExportStatusResult {
 
 export interface ExportResult {
   message: string;
-  render: {
+  renders: {
     id: string;
     videoUrl: string;
     thumbnailUrl: string | null;
     duration: number;
+    width: number;
+    height: number;
     resolution: string;
-    platform: PlatformTarget;
+    platform: PlatformTarget[];
     codec: string;
+    status: string;
+    workflowId: string;
     createdAt: string;
-  };
+  }[];
+}
+
+export interface RetryResult {
+  message: string;
+  renderJob: RenderJobSummary;
 }
 
 /**
@@ -52,7 +76,7 @@ export const exportApi = {
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platform }),
+        body: JSON.stringify({ platforms: [platform] }),
       },
     );
     const body = await res.json().catch(() => null);
@@ -74,5 +98,25 @@ export const exportApi = {
       throw new Error(body?.error ?? 'Failed to get export status');
     }
     return body as ExportStatusResult;
+  },
+
+  retryRender: async (
+    universeId: string,
+    projectId: string,
+    renderId: string,
+  ): Promise<RetryResult> => {
+    const res = await fetch(
+      `/api/universes/${universeId}/studio/${projectId}/export`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ renderId }),
+      },
+    );
+    const body = await res.json().catch(() => null);
+    if (!res.ok) {
+      throw new Error(body?.error ?? 'Failed to retry render');
+    }
+    return body as RetryResult;
   },
 };

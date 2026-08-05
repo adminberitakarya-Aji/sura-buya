@@ -290,6 +290,9 @@ export interface ShotSpec {
 /**
  * VideoAsset — metadata output video final. Dipetakan ke model Prisma
  * `VideoRender`.
+ * 
+ * @deprecated Gunakan `VideoRender` yang lebih lengkap (include status, width/height, renderJobs)
+ * VideoAsset dipertahankan untuk backward compat dengan kode existing.
  */
 export interface VideoAsset {
     projectId: string;
@@ -297,10 +300,71 @@ export interface VideoAsset {
     thumbnailUrl?: string;
     /** Durasi dalam detik */
     duration: number;
-    /** Resolusi, mis. "1080x1920" */
+    /** Resolusi, mis. "1080x1920" — legacy field, gunakan width/height di VideoRender */
     resolution: string;
-    platform: PlatformTarget[];
+    /** @deprecated Gunakan platform array di VideoRender */
+    platform: PlatformTarget;
 }
+
+/**
+ * VideoRender — mirror Prisma model `VideoRender` (VF-4.6).
+ * Termasuk status tracking, width/height terpisah untuk query efisien,
+ * platform array untuk multi-platform, dan relasi ke VideoRenderJob.
+ */
+export interface VideoRender {
+    id: string;
+    projectId: string;
+    videoUrl: string;
+    thumbnailUrl: string | null;
+    duration: number;
+    width: number;
+    height: number;
+    resolution: string;           // legacy/compat display (e.g. "1080x1920")
+    platform: PlatformTarget[];   // array untuk multi-platform render
+    codec: string;
+    fileSizeBytes: bigint | null;
+    status: RenderStatus;
+    metadata: Record<string, unknown> | null;
+    createdAt: Date;
+    updatedAt: Date;
+    renderJobs?: VideoRenderJob[];
+}
+
+/**
+ * VideoRenderJob — tracking percobaan render (mirror Prisma `VideoRenderJob`).
+ * Berguna untuk observability: provider mana yang gagal, berapa retry, fallback chain history.
+ */
+export interface VideoRenderJob {
+    id: string;
+    renderId: string;
+    attemptNumber: number;
+    providerUsed: string;
+    status: RenderJobStatus;
+    startedAt: Date | null;
+    completedAt: Date | null;
+    error: string | null;
+    cost: number | null;
+    metadata: Record<string, unknown> | null;
+}
+
+/**
+ * RenderStatus — status siklus hidup VideoRender.
+ */
+export type RenderStatus =
+    | 'PENDING'
+    | 'RENDERING'
+    | 'DONE'
+    | 'FAILED';
+
+/**
+ * RenderJobStatus — status siklus hidup VideoRenderJob (per attempt).
+ */
+export type RenderJobStatus =
+    | 'PENDING'
+    | 'RUNNING'
+    | 'DONE'
+    | 'FAILED'
+    | 'CANCELLED';
 
 /**
  * Zod schemas untuk validasi runtime. Dipisah dari `SCHEMAS` di
