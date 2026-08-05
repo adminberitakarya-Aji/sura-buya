@@ -146,16 +146,18 @@ export async function buildTimelineActivity(
     }>;
 
     // 3. Filter MediaAsset yang DONE
-    const videoClips = project.mediaAssets
-        .filter((a) => a.type === 'VIDEO_CLIP' && a.status === 'DONE' && a.resultUrl)
-        .sort((a, b) => a.shotIndex - b.shotIndex);
+    const mediaAssets = project.mediaAssets as MediaAssetWithExtras[];
+        
+    const videoClips = mediaAssets
+        .filter((a: MediaAssetWithExtras) => a.type === 'VIDEO_CLIP' && a.status === 'DONE' && a.resultUrl)
+        .sort((a: MediaAssetWithExtras, b: MediaAssetWithExtras) => a.shotIndex - b.shotIndex);
 
-    const audioAssets = project.mediaAssets
-        .filter((a) => a.type === 'AUDIO' && a.status === 'DONE' && a.resultUrl)
-        .sort((a, b) => a.shotIndex - b.shotIndex);
+    const audioAssets = mediaAssets
+        .filter((a: MediaAssetWithExtras) => a.type === 'AUDIO' && a.status === 'DONE' && a.resultUrl)
+        .sort((a: MediaAssetWithExtras, b: MediaAssetWithExtras) => a.shotIndex - b.shotIndex);
 
     // 4. Build GeneratedClip array untuk timeline-builder
-    const clips: GeneratedClip[] = videoClips.map((asset) => ({
+    const clips: GeneratedClip[] = videoClips.map((asset: MediaAssetWithExtras) => ({
         shotIndex: asset.shotIndex,
         clipUrl: asset.resultUrl!,
         durationActual: storyboard.find((s) => s.index === asset.shotIndex)?.duration ?? 5,
@@ -170,8 +172,8 @@ export async function buildTimelineActivity(
 
     // 5. Build GeneratedVoiceover array
     const voiceovers: GeneratedVoiceover[] = audioAssets
-        .filter((a) => (a as MediaAssetWithExtras).subtype === 'VOICEOVER')
-        .map((asset) => ({
+        .filter((a: MediaAssetWithExtras) => a.subtype === 'VOICEOVER')
+        .map((asset: MediaAssetWithExtras) => ({
             shotIndex: asset.shotIndex,
             audioUrl: asset.resultUrl!,
             durationActual: storyboard.find((s) => s.index === asset.shotIndex)?.duration ?? 5,
@@ -185,11 +187,10 @@ export async function buildTimelineActivity(
 
     // 6. Build SelectedSfx array
     const sfxSelections = audioAssets
-        .filter((a) => (a as MediaAssetWithExtras).subtype === 'SFX')
-        .reduce((acc, asset) => {
+        .filter((a: MediaAssetWithExtras) => a.subtype === 'SFX')
+        .reduce((acc: Record<number, { shotIndex: number; sfx: SfxLibraryEntry[] }>, asset: MediaAssetWithExtras) => {
             const shotIndex = asset.shotIndex;
-            const assetExtras = asset as MediaAssetWithExtras;
-            const metadata = assetExtras.metadata ?? {};
+            const metadata: Record<string, unknown> = asset.metadata ?? {};
             if (!acc[shotIndex]) {
                 acc[shotIndex] = { shotIndex, sfx: [] };
             }
@@ -201,19 +202,19 @@ export async function buildTimelineActivity(
             return acc;
         }, {} as Record<number, { shotIndex: number; sfx: SfxLibraryEntry[] }>);
 
-    const sfxArray: SelectedSfx[] = Object.values(sfxSelections).map(s => ({
+    const sfxArray: SelectedSfx[] = Object.values(sfxSelections).map((s: { shotIndex: number; sfx: SfxLibraryEntry[] }) => ({
         shotIndex: s.shotIndex,
         sfx: s.sfx,
         matchedAction: '',
     }));
 
     // 7. Build MusicSelectionResult
-    const bgmAsset = audioAssets.find((a) => (a as MediaAssetWithExtras).subtype === 'BGM');
+    const bgmAsset = audioAssets.find((a: MediaAssetWithExtras) => a.subtype === 'BGM');
     const music: MusicSelectionResult = bgmAsset
         ? {
-            primaryTrack: createMusicLibraryEntry(bgmAsset.resultUrl!, (bgmAsset as MediaAssetWithExtras).metadata ?? {}),
+            primaryTrack: createMusicLibraryEntry(bgmAsset.resultUrl!, bgmAsset.metadata ?? {}),
             alternativeTracks: [],
-            inferredMood: ((bgmAsset as MediaAssetWithExtras).metadata?.['mood'] as string) ?? 'neutral',
+            inferredMood: (bgmAsset.metadata?.['mood'] as string) ?? 'neutral',
             warnings: [],
         }
         : {

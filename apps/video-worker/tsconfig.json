@@ -21,6 +21,7 @@
   "exclude": ["node_modules", "dist", "dist/**/*", "tests"],
   "references": [
     { "path": "../../packages/shared" },
-    { "path": "../../packages/engine-v2" }
+    { "path": "../../packages/engine-v2" },
+    { "path": "../../packages/video-renderer" }
   ]
 }
