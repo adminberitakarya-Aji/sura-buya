@@ -227,7 +227,23 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         }
       }
       
-      // 5b. SFX — select from library, create MediaAsset with status DONE directly
+      // 5b. SFX & BGM — hapus dulu selection lama untuk project ini sebelum
+      //     insert baru. TIDAK pakai findFirst-per-item seperti VOICEOVER,
+      //     karena SFX/BGM dipilih ulang dari SELURUH storyboard setiap kali
+      //     endpoint ini dipanggil — kalau storyboard berubah, selection lama
+      //     jadi tidak valid lagi (bukan cuma redundant) dan harus diganti
+      //     total, bukan di-skip. Tanpa ini, tiap klik "Generate" ulang akan
+      //     numpuk SFX/BGM duplikat di project yang sama (SFX bisa terdengar
+      //     dobel/triple di video hasil render).
+      await prisma.mediaAsset.deleteMany({
+        where: {
+          projectId: params.projectId,
+          type: 'AUDIO',
+          subtype: { in: ['SFX', 'BGM'] },
+        },
+      });
+
+      // SFX — select from library, create MediaAsset with status DONE directly
       const sfxResult = selectSfxForShots(storyboard);
       for (const sfxSelection of sfxResult.selections) {
         const shotIndex = sfxSelection.shotIndex;
