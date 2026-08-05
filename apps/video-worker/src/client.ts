@@ -17,7 +17,9 @@ import type { Client, WorkflowHandle } from '@temporalio/client';
 import { createTemporalClient } from './connection.js';
 import { loadConfig } from './config.js';
 import type { MediaJobWorkflowInput, MediaGenerationResult } from './shared/interfaces.js';
+import type { RenderWorkflowInput, RenderWorkflowResult } from './shared/render-interfaces.js';
 import { getStatus, cancelSignal } from './workflows/index.js';
+import { getRenderStatus, cancelRenderSignal } from './workflows/index.js';
 
 /**
  * Singleton Temporal client — dibuat sekali, dipakai berkali-kali.
@@ -93,6 +95,72 @@ export async function cancelMediaJob(workflowId: string): Promise<void> {
 export async function waitForMediaJobResult(
     workflowId: string,
 ): Promise<MediaGenerationResult | undefined> {
+    const client = await getClient();
+    const handle = client.workflow.getHandle(workflowId);
+    return await handle.result();
+}
+
+/**
+ * Start Render workflow untuk full video composition.
+ *
+ * @param input Data lengkap untuk render (videoRenderId, projectId, platforms, dll.)
+ * @returns Workflow handle untuk interact dengan workflow yang sedang berjalan
+ */
+export async function startRenderWorkflow(
+    input: RenderWorkflowInput,
+): Promise<WorkflowHandle> {
+    const client = await getClient();
+    const config = loadConfig();
+
+    // Generate workflow ID — unik per video render
+    const workflowId = `render-${input.videoRenderId}`;
+
+    return await client.workflow.start('renderWorkflow', {
+        workflowId,
+        taskQueue: config.temporal.taskQueue,
+        args: [input],
+    });
+}
+
+/**
+ * Query status Render workflow.
+ *
+ * @param workflowId ID workflow (dari startRenderWorkflow return value)
+ * @returns Status object dengan detail progress
+ */
+export async function getRenderWorkflowStatus(
+    workflowId: string,
+): Promise<{
+    status: string;
+    currentPlatform: string | null;
+    attemptNumber: number;
+    lastError: string | undefined;
+}> {
+    const client = await getClient();
+    const handle = client.workflow.getHandle(workflowId);
+    return await handle.query(getRenderStatus);
+}
+
+/**
+ * Cancel Render workflow.
+ *
+ * @param workflowId ID workflow yang akan di-cancel
+ */
+export async function cancelRenderWorkflow(workflowId: string): Promise<void> {
+    const client = await getClient();
+    const handle = client.workflow.getHandle(workflowId);
+    await handle.signal(cancelRenderSignal);
+}
+
+/**
+ * Tunggu Render workflow selesai dan dapatkan hasilnya.
+ *
+ * @param workflowId ID workflow
+ * @returns RenderWorkflowResult dengan URL per platform
+ */
+export async function waitForRenderWorkflowResult(
+    workflowId: string,
+): Promise<RenderWorkflowResult | undefined> {
     const client = await getClient();
     const handle = client.workflow.getHandle(workflowId);
     return await handle.result();

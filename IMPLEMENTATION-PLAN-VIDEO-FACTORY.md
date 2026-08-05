@@ -151,10 +151,10 @@ Menambahkan kemampuan generate video pendek (MP4 9:16, 15-60 detik) di atas Char
 
 ### Acceptance Criteria
 
-- [x] Provider TTS final sudah diputuskan berdasarkan uji nyata lintas rentang suara Bahasa Indonesia (bukan cuma satu rentang usia) — **ElevenLabs primary, Cartesia secondary, IndoTTS fallback**
-- [x] Voice karakter terdengar sama/konsisten di lebih dari satu episode (uji lintas-episode, sama seperti VF-3) — **voice profile dari CharacterAsset dipakai lintas episode**
-- [x] **Milestone: video end-to-end pertama berhasil di-render MP4 9:16** — **pipeline lengkap: script → storyboard → keyframe → video clip → voiceover → SFX → music → timeline → Remotion compose → FFmpeg encode → MP4 1080x1920**
-- [x] Output memenuhi spesifikasi platform (1080x1920, safe zone, codec) — **platform-preset.ts mendefinisikan preset TikTok/Reels/Shorts/YouTube dengan safe zone 90%, H.264, -movflags +faststart, yuv420p**
+- [ ] Provider TTS final sudah diputuskan berdasarkan uji nyata lintas rentang suara Bahasa Indonesia (bukan cuma satu rentang usia) — **ElevenLabs primary, Cartesia secondary, IndoTTS fallback**
+- [ ] Voice karakter terdengar sama/konsisten di lebih dari satu episode (uji lintas-episode, sama seperti VF-3) — **voice profile dari CharacterAsset dipakai lintas episode**
+- [ ] **Milestone: video end-to-end pertama berhasil di-render MP4 9:16** — **pipeline lengkap: script → storyboard → keyframe → video clip → voiceover → SFX → music → timeline → Remotion compose → FFmpeg encode → MP4 1080x1920**
+- [ ] Output memenuhi spesifikasi platform (1080x1920, safe zone, codec) — **platform-preset.ts mendefinisikan preset TikTok/Reels/Shorts/YouTube dengan safe zone 90%, H.264, -movflags +faststart, yuv420p**
 
 ---
 

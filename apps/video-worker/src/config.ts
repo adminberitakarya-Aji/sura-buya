@@ -156,3 +156,14 @@ export const DEFAULT_ACTIVITY_OPTIONS = {
     startToCloseTimeout: '5 minutes',
     retry: DEFAULT_RETRY_POLICY,
 } as const;
+
+/**
+ * Default activity options untuk render workflow — timeout lebih lama.
+ * Render + encode bisa butuh waktu lebih lama dari media generation per shot.
+ * startToCloseTimeout: 15 menit (Remotion render + FFmpeg encode per platform)
+ * retry: same retry policy as media jobs
+ */
+export const DEFAULT_RENDER_ACTIVITY_OPTIONS = {
+    startToCloseTimeout: '15 minutes',
+    retry: DEFAULT_RETRY_POLICY,
+} as const;
