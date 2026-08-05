@@ -23,6 +23,7 @@
 
 import { proxyActivities, defineQuery, defineSignal, setHandler, ApplicationFailure } from '@temporalio/workflow';
 import type { RenderWorkflowInput, RenderWorkflowResult, RenderJobStatus } from '../shared/render-interfaces.js';
+import type { UploadToR2Input, UploadToR2Result } from '../shared/render-interfaces.js';
 import { DEFAULT_RENDER_ACTIVITY_OPTIONS } from '../config.js';
 
 /**
@@ -49,7 +50,7 @@ export const cancelRenderSignal = defineSignal('cancelRender');
 /**
  * Status internal workflow.
  */
-type RenderWorkflowStatus = 'BUILDING_TIMELINE' | 'RENDERING_REMOTION' | 'ENCODING_FFMPEG' | 'DONE' | 'FAILED' | 'CANCELLED';
+type RenderWorkflowStatus = 'BUILDING_TIMELINE' | 'RENDERING_REMOTION' | 'ENCODING_FFMPEG' | 'UPLOADING_R2' | 'DONE' | 'FAILED' | 'CANCELLED';
 
 /**
  * Activity interface untuk render workflow.
@@ -69,6 +70,11 @@ interface RenderActivities {
      * Encode video via FFmpeg per platform.
      */
     encodeFfmpeg(input: EncodeFfmpegInput): Promise<EncodeFfmpegResult>;
+
+    /**
+     * Upload encoded video ke Cloudflare R2 (VF-5.7).
+     */
+    uploadToR2(input: UploadToR2Input): Promise<UploadToR2Result>;
 
     /**
      * Update VideoRender status di DB.
@@ -273,6 +279,7 @@ export async function renderWorkflow(
             });
 
             // --- Step 4: Encode per platform via FFmpeg ---
+            // --- Step 5: Upload encoded videos to R2 (VF-5.7) ---
             const platformResults: RenderWorkflowResult['platforms'] = [];
 
             for (const platform of platforms) {
@@ -290,9 +297,20 @@ export async function renderWorkflow(
                     height: timelineResult.height,
                 });
 
+                // Upload to R2
+                status = 'UPLOADING_R2';
+                await checkCancelled();
+
+                const r2Key = `renders/${projectId}/${videoRenderId}-${platform.toLowerCase()}.mp4`;
+                const uploadResult = await activities.uploadToR2({
+                    filePath: encodeResult.outputPath,
+                    key: r2Key,
+                    contentType: 'video/mp4',
+                });
+
                 platformResults.push({
                     platform,
-                    videoUrl: `file://${encodeResult.outputPath}`, // In production: upload to storage, return CDN URL
+                    videoUrl: uploadResult.presignedUrl, // Use presigned URL for secure access
                     thumbnailUrl: '', // TODO: generate thumbnail
                     fileSizeBytes: encodeResult.fileSizeBytes,
                     resolution: encodeResult.resolution,

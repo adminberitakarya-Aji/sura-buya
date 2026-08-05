@@ -159,6 +159,34 @@ export interface EncodeFfmpegResult {
 }
 
 /**
+ * Input untuk uploadToR2 activity (VF-5.7).
+ */
+export interface UploadToR2Input {
+    /** Local file path */
+    filePath: string;
+    /** R2 object key */
+    key: string;
+    /** Content-Type header */
+    contentType: string;
+}
+
+/**
+ * Hasil uploadToR2 activity.
+ */
+export interface UploadToR2Result {
+    /** R2 object key */
+    key: string;
+    /** Public URL (if configured) */
+    publicUrl?: string;
+    /** Presigned download URL */
+    presignedUrl: string;
+    /** ETag dari R2 */
+    etag?: string;
+    /** File size in bytes */
+    size: number;
+}
+
+/**
  * Input untuk updateVideoRenderStatus activity.
  */
 export interface UpdateVideoRenderStatusInput {

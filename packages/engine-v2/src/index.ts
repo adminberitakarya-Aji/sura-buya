@@ -55,6 +55,13 @@ export * from './audio/music-selector.js';
 export * from './compose/platform-preset.js';
 export * from './compose/timeline-builder.js';
 
+// VF-5.1 — Safety review (baseline platform policy + rating-consistency, generik)
+export * from './validate/safety-review.js';
+
+// VF-5.6 — Batch orchestrator + export manager (metadata: title, caption, hashtag)
+export * from './batch/batch-orchestrator.js';
+export * from './batch/export-manager.js';
+
 // Explicitly re-export AI registry to avoid conflicts
 export {
   ProviderRegistry,

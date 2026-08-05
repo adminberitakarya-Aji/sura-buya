@@ -20,6 +20,8 @@ import type { MediaJobWorkflowInput, MediaGenerationResult } from './shared/inte
 import type { RenderWorkflowInput, RenderWorkflowResult } from './shared/render-interfaces.js';
 import { getStatus, cancelSignal } from './workflows/index.js';
 import { getRenderStatus, cancelRenderSignal } from './workflows/index.js';
+import { approvalSignal, cancelSignal as cancelReviewSignal, getReviewResult } from './workflows/index.js';
+import type { ReviewWorkflowInput, ReviewWorkflowResult } from './shared/review-interfaces.js';
 
 /**
  * Singleton Temporal client — dibuat sekali, dipakai berkali-kali.
@@ -161,6 +163,102 @@ export async function cancelRenderWorkflow(workflowId: string): Promise<void> {
 export async function waitForRenderWorkflowResult(
     workflowId: string,
 ): Promise<RenderWorkflowResult | undefined> {
+    const client = await getClient();
+    const handle = client.workflow.getHandle(workflowId);
+    return await handle.result();
+}
+
+// ============================================================
+// VF-5.5 — Review Workflow Client API
+// ============================================================
+
+/**
+ * Start Review workflow untuk canon check + safety review + human approval.
+ *
+ * @param input Data lengkap untuk review video (projectId, script, characterId, dll.)
+ * @returns Workflow handle untuk interact dengan workflow yang sedang berjalan
+ */
+export async function startReviewWorkflow(
+    input: ReviewWorkflowInput,
+): Promise<WorkflowHandle> {
+    const client = await getClient();
+    const config = loadConfig();
+
+    // Generate workflow ID — unik per project review
+    const workflowId = `review-${input.projectId}`;
+
+    return await client.workflow.start('reviewWorkflow', {
+        workflowId,
+        taskQueue: config.temporal.taskQueue,
+        args: [input],
+    });
+}
+
+/**
+ * Query status Review workflow.
+ *
+ * @param workflowId ID workflow (dari startReviewWorkflow return value)
+ * @returns Status string ('RUNNING_CANON_CHECK', 'RUNNING_SAFETY_REVIEW', 'WAITING_APPROVAL', dst.)
+ */
+export async function getReviewWorkflowStatus(
+    workflowId: string,
+): Promise<string> {
+    const client = await getClient();
+    const handle = client.workflow.getHandle(workflowId);
+    return await handle.query(getStatus);
+}
+
+/**
+ * Query review result (bisa diakses sebelum approval — untuk tampilkan canon + safety findings).
+ *
+ * @param workflowId ID workflow
+ * @returns ReviewWorkflowResult atau null kalau belum tersedia
+ */
+export async function getReviewWorkflowResult(
+    workflowId: string,
+): Promise<ReviewWorkflowResult | null> {
+    const client = await getClient();
+    const handle = client.workflow.getHandle(workflowId);
+    return await handle.query(getReviewResult);
+}
+
+/**
+ * Send approval signal ke Review workflow.
+ *
+ * @param workflowId ID workflow
+ * @param decision 'APPROVE' atau 'REJECT'
+ * @param feedback Feedback opsional dari reviewer
+ */
+export async function sendReviewApproval(
+    workflowId: string,
+    decision: 'APPROVE' | 'REJECT',
+    feedback?: string,
+): Promise<void> {
+    const client = await getClient();
+    const handle = client.workflow.getHandle(workflowId);
+    await handle.signal(approvalSignal, decision, feedback);
+}
+
+/**
+ * Cancel Review workflow.
+ *
+ * @param workflowId ID workflow yang akan di-cancel
+ */
+export async function cancelReviewWorkflow(workflowId: string): Promise<void> {
+    const client = await getClient();
+    const handle = client.workflow.getHandle(workflowId);
+    await handle.signal(cancelReviewSignal);
+}
+
+/**
+ * Tunggu Review workflow selesai dan dapatkan hasilnya.
+ *
+ * @param workflowId ID workflow
+ * @returns ReviewWorkflowResult dengan keputusan akhir
+ */
+export async function waitForReviewWorkflowResult(
+    workflowId: string,
+): Promise<ReviewWorkflowResult | undefined> {
     const client = await getClient();
     const handle = client.workflow.getHandle(workflowId);
     return await handle.result();

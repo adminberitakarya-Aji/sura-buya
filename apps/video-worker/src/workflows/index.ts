@@ -11,3 +11,4 @@
 
 export { mediaJobWorkflow, getStatus, cancelSignal } from './media-job.js';
 export { renderWorkflow, getRenderStatus, cancelRenderSignal } from './render-workflow.js';
+export { reviewWorkflow, approvalSignal, cancelSignal as cancelReviewSignal, getReviewResult } from './review-workflow.js';

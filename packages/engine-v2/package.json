@@ -76,6 +76,16 @@
       "types": "./dist/ai/registry.d.ts",
       "import": "./dist/ai/registry.js",
       "require": "./dist/cjs/ai/registry.js"
+    },
+    "./validate/safety-review.js": {
+      "types": "./dist/validate/safety-review.d.ts",
+      "import": "./dist/validate/safety-review.js",
+      "require": "./dist/cjs/validate/safety-review.js"
+    },
+    "./ai/providers.js": {
+      "types": "./dist/ai/providers.d.ts",
+      "import": "./dist/ai/providers.js",
+      "require": "./dist/cjs/ai/providers.js"
     }
   },
   "scripts": {

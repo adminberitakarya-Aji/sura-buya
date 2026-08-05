@@ -16,6 +16,7 @@ import { prisma } from '../lib/db.js';
 import { Prisma } from '@prisma/client';
 import { buildTimeline, getPlatformPreset } from '@suro-buya/engine-v2';
 import { isFFmpegAvailable, encodeVideo } from '@suro-buya/video-renderer';
+import { R2Storage, R2Paths, type UploadOptions } from '@suro-buya/shared';
 import type { 
     VideoTimeline, 
     GeneratedClip, 
@@ -43,6 +44,8 @@ import type {
     UpsertVideoRenderJobInput,
     GetVideoRenderJobInput,
     VideoRenderJobRecord,
+    UploadToR2Input,
+    UploadToR2Result,
 } from '../shared/render-interfaces.js';
 import { ApplicationFailure } from '@temporalio/common';
 
@@ -481,5 +484,90 @@ export async function getVideoRenderJobActivity(
         error: job.error,
         cost: job.cost,
         metadata: job.metadata as Record<string, unknown> | null,
+    };
+}
+
+/**
+ * R2 Storage instance (lazy initialization from config)
+ */
+let r2StorageInstance: R2Storage | null = null;
+
+function getR2Storage(): R2Storage | null {
+    if (r2StorageInstance) return r2StorageInstance;
+    
+    // Get config from environment
+    const env = process.env as Record<string, string | undefined>;
+    const accountId = env['R2_ACCOUNT_ID'];
+    const accessKeyId = env['R2_ACCESS_KEY_ID'];
+    const secretAccessKey = env['R2_SECRET_ACCESS_KEY'];
+    const bucket = env['R2_BUCKET'];
+    const publicUrl = env['R2_PUBLIC_URL'];
+    const presignedTtlSeconds = env['R2_PRESIGNED_TTL_SECONDS']
+        ? parseInt(env['R2_PRESIGNED_TTL_SECONDS']!, 10)
+        : undefined;
+
+    if (!accountId || !accessKeyId || !secretAccessKey || !bucket) {
+        return null; // R2 not configured
+    }
+
+    r2StorageInstance = new R2Storage({
+        accountId,
+        accessKeyId,
+        secretAccessKey,
+        bucket,
+        publicUrl,
+        presignedTtlSeconds,
+    });
+
+    return r2StorageInstance;
+}
+
+/**
+ * Activity: Upload encoded video ke Cloudflare R2 (VF-5.7).
+ * 
+ * Mengupload file video yang sudah di-encode ke R2 bucket
+ * dan return presigned URL untuk download.
+ *
+ * @param input.filePath Local file path
+ * @param input.key R2 object key
+ * @param input.contentType Content-Type header
+ * @returns Upload result dengan presigned URL
+ */
+export async function uploadToR2Activity(
+    input: UploadToR2Input,
+): Promise<UploadToR2Result> {
+    const { filePath, key, contentType } = input;
+
+    const r2 = getR2Storage();
+    if (!r2) {
+        throw ApplicationFailure.nonRetryable(
+            'R2 Storage not configured — missing R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, or R2_BUCKET',
+            'R2NotConfigured',
+        );
+    }
+
+    const fs = await import('node:fs/promises');
+    
+    // Read file
+    const fileBuffer = await fs.readFile(filePath);
+    const size = fileBuffer.length;
+
+    // Upload to R2
+    const uploadOptions: UploadOptions = {
+        contentType,
+        cacheControl: 'public, max-age=31536000, immutable',
+    };
+
+    const result = await r2.upload(key, fileBuffer, uploadOptions);
+
+    // Generate presigned download URL
+    const presignedUrl = await r2.getPresignedDownloadUrl(key);
+
+    return {
+        key: result.key,
+        publicUrl: result.publicUrl,
+        presignedUrl,
+        etag: result.etag,
+        size: result.size,
     };
 }

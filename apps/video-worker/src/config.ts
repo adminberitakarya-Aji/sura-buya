@@ -37,6 +37,24 @@ export interface TemporalConfig {
 }
 
 /**
+ * Konfigurasi Cloudflare R2 Storage (VF-5.7).
+ */
+export interface R2Config {
+    /** Cloudflare Account ID */
+    accountId: string;
+    /** R2 Access Key ID */
+    accessKeyId: string;
+    /** R2 Secret Access Key */
+    secretAccessKey: string;
+    /** Bucket name */
+    bucket: string;
+    /** Optional custom domain (e.g., https://cdn.suro-buya.com) */
+    publicUrl?: string;
+    /** Presigned URL TTL in seconds (default: 3600 = 1 hour) */
+    presignedTtlSeconds?: number;
+}
+
+/**
  * Konfigurasi media provider API keys.
  * Dipakai oleh lib/provider-setup.ts untuk membangun MediaProviderRegistry
  * dengan provider nyata (VF-3.1 image, VF-3.3 video).
@@ -64,6 +82,8 @@ export interface WorkerConfig {
     mediaProviders: MediaProviderKeyConfig;
     /** Database URL — sama seperti apps/web, dipakai Prisma client */
     databaseUrl: string;
+    /** R2 Storage config (VF-5.7) */
+    r2: R2Config | null;
     /**
      * Max retry attempts per provider sebelum fallback ke provider berikutnya.
      * Default: 3 (sesuai retry policy Temporal yang reasonable untuk media gen).
@@ -102,6 +122,27 @@ export function loadConfig(): WorkerConfig {
     const clientCertPath = process.env['TEMPORAL_CLIENT_CERT_PATH'];
     const clientKeyPath = process.env['TEMPORAL_CLIENT_KEY_PATH'];
 
+    // R2 config (optional - only required for VF-5.7 video storage)
+    const r2AccountId = process.env['R2_ACCOUNT_ID'];
+    const r2AccessKeyId = process.env['R2_ACCESS_KEY_ID'];
+    const r2SecretAccessKey = process.env['R2_SECRET_ACCESS_KEY'];
+    const r2Bucket = process.env['R2_BUCKET'];
+    const r2PublicUrl = process.env['R2_PUBLIC_URL'];
+    const r2PresignedTtlSeconds = process.env['R2_PRESIGNED_TTL_SECONDS']
+        ? parseInt(process.env['R2_PRESIGNED_TTL_SECONDS']!, 10)
+        : undefined;
+
+    const r2Config = r2AccountId && r2AccessKeyId && r2SecretAccessKey && r2Bucket
+        ? {
+            accountId: r2AccountId,
+            accessKeyId: r2AccessKeyId,
+            secretAccessKey: r2SecretAccessKey,
+            bucket: r2Bucket,
+            publicUrl: r2PublicUrl || undefined,
+            presignedTtlSeconds: r2PresignedTtlSeconds,
+        }
+        : null;
+
     return {
         temporal: {
             address: temporalAddress,
@@ -115,6 +156,7 @@ export function loadConfig(): WorkerConfig {
             geminiApiKey: process.env['GEMINI_API_KEY'] || undefined,
         },
         databaseUrl,
+        r2: r2Config,
         maxRetryAttempts: parseInt(
             process.env['MEDIA_JOB_MAX_RETRIES'] ?? '3',
             10,

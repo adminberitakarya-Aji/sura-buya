@@ -12,6 +12,10 @@
     "./shared": {
       "types": "./dist/shared/interfaces.d.ts",
       "import": "./dist/shared/interfaces.js"
+    },
+    "./shared/review-interfaces": {
+      "types": "./dist/shared/review-interfaces.d.ts",
+      "import": "./dist/shared/review-interfaces.js"
     }
   },
   "prisma": {

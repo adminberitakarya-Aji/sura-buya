@@ -28,6 +28,7 @@ model User {
   comments       Comment[]        @relation("CommentAuthor")
   presences      Presence[]
   comparisonSessions ComparisonSession[] @relation("ComparisonSessionUser")
+  safetyReviewLogs   SafetyReviewLog[] // VF-5.3 — reverse relasi
 }
 
 model Account {
@@ -92,21 +93,22 @@ model Universe {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  owner            User            @relation("UniverseOwner", fields: [ownerId], references: [id])
+  owner            User               @relation("UniverseOwner", fields: [ownerId], references: [id])
   members          UniverseMember[]
   characters       Character[]
   bibleFiles       BibleFile[]
   episodes         Episode[]
   canonRules       CanonRule[]
   aiConfigs        AIConfig[]
-  regions          Region[]         @relation("RegionUniverse")
-  seasons          Season[]         @relation("SeasonUniverse")
-  generationJobs   GenerationJob[]  @relation("GenerationJobUniverse")
-  videoSeries      VideoSeries[]    // VF-1.3
-  videoProjects    VideoProject[]   // VF-2.1 — reverse relasi
+  regions          Region[]            @relation("RegionUniverse")
+  seasons          Season[]            @relation("SeasonUniverse")
+  generationJobs   GenerationJob[]     @relation("GenerationJobUniverse")
+  videoSeries      VideoSeries[]       // VF-1.3
+  videoProjects    VideoProject[]      // VF-2.1 — reverse relasi
   comments         Comment[]
   presences        Presence[]
   comparisonSessions ComparisonSession[]
+  safetyReviewLogs   SafetyReviewLog[] // VF-5.3 — reverse relasi
 }
 
 // VF-1.3 — lihat REDESIGN-VIDEO-FACTORY.md §2.3.1
@@ -234,14 +236,15 @@ model VideoProject {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
-  universe   Universe     @relation(fields: [universeId], references: [id], onDelete: Cascade)
-  series     VideoSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+  universe         Universe           @relation(fields: [universeId], references: [id], onDelete: Cascade)
+  series           VideoSeries?       @relation(fields: [seriesId], references: [id], onDelete: SetNull)
   // onDelete: Restrict (eksplisit) — berbeda sengaja dari konvensi Cascade di seluruh
   // schema lainnya karena video output punya biaya AI generation nyata, tidak boleh
   // terhapus ikut Character. User harus hapus VideoProject secara eksplisit dulu.
-  character  Character    @relation(fields: [characterId], references: [id], onDelete: Restrict)
-  mediaAssets MediaAsset[] // VF-3.6
-  videoRenders VideoRender[] // VF-4.6 — reverse relasi
+  character        Character          @relation(fields: [characterId], references: [id], onDelete: Restrict)
+  mediaAssets      MediaAsset[]       // VF-3.6
+  videoRenders     VideoRender[]      // VF-4.6 — reverse relasi
+  safetyReviewLogs SafetyReviewLog[]  // VF-5.3 — reverse relasi
 
   @@index([universeId])
   // Cegah dua project klaim "episode 1" di series yang sama.
@@ -372,6 +375,70 @@ enum RenderJobStatus {
   DONE
   FAILED
   CANCELLED
+}
+
+// ============================================================
+// VF-5.3 — SafetyReviewLog (audit trail keputusan moderation)
+// ============================================================
+
+model SafetyReviewLog {
+  id              String         @id @default(cuid())
+  projectId       String
+  universeId      String
+  reviewerId      String?        // null = otomatis (LLM classifier), terisi = human reviewer
+  status          ReviewLogStatus @default(PENDING)
+  layer           SafetyLayer    // baseline-policy | rating-consistency
+  flaggedRule     String?        // rule ID (baseline policy) atau 'llm-classifier' (rating-consistency)
+  category        SafetyCategory // kategori finding
+  severity        SafetySeverity // block | warning | info
+  message         String         @db.Text
+  location        String?        @db.Text // kutipan teks/section
+  suggestion      String?        @db.Text
+  confidence      Float          @default(1.0)
+  contentRating   ContentRating  // rating universe saat review
+  videoMetadata   Json?          // snapshot metadata video saat review
+  feedback        String?        @db.Text // feedback human reviewer (VF-5.4)
+  decidedAt       DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  project         VideoProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  universe        Universe       @relation(fields: [universeId], references: [id], onDelete: Cascade)
+  reviewer        User?          @relation(fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([universeId])
+  @@index([status])
+}
+
+enum ReviewLogStatus {
+  PENDING      // review dibuat, belum di-review human (kalau perlu)
+  APPROVED     // human approve export
+  REJECTED     // human reject, minta regenerate/perbaiki
+  AUTO_PASSED  // tidak ada baseline violation, lolos otomatis
+  AUTO_BLOCKED // baseline policy violation — block otomatis
+}
+
+enum SafetyLayer {
+  BASELINE_POLICY
+  RATING_CONSISTENCY
+}
+
+enum SafetyCategory {
+  ILLEGAL_CONTENT
+  HATE_SPEECH
+  NON_CONSENSUAL_SEXUAL_CONTENT
+  VIOLENCE_PROMOTION
+  RATING_MISMATCH
+  TONE_MISMATCH
+  INTENSITY_MISMATCH
+  THEME_MISMATCH
+}
+
+enum SafetySeverity {
+  BLOCK
+  WARNING
+  INFO
 }
 
 // VF-4.6 — platform target untuk VideoRender

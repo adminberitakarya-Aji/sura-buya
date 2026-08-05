@@ -487,6 +487,81 @@ export class CanonValidator {
   }
 
   // ============================================================
+  // VF-5.2 — Canon check final sebelum export (video jadi)
+  // Extend (bukan rewrite) — method baru untuk cek video final,
+  // bukan cuma naskah. Reuse validateVideoScript() (VF-2.4) untuk
+  // script, lalu tambah check shot descriptions & metadata video.
+  // ============================================================
+
+  /**
+   * Validate video final against canon — cek video jadi (bukan cuma naskah).
+   *
+   * Ini adalah canon check final sebelum export (VF-5.2):
+   * 1. Reuse validateVideoScript() (VF-2.4) untuk cek script final
+   * 2. Tambah check shot descriptions/visual prompts konsisten persona
+   * 3. Tambah check series continuity di level video jadi
+   *
+   * Acceptance criteria: "Video yang melanggar persona karakter atau
+   * continuity series juga ter-flag, terpisah dari hasil content moderation"
+   *
+   * @param script Script final video
+   * @param context Konteks video final (extend VideoCanonContext)
+   * @param options Opsi validasi
+   * @returns Hasil canon validation
+   */
+  async validateVideoFinal(
+    script: string,
+    context: VideoFinalCanonContext,
+    options: ValidationOptions = {}
+  ): Promise<CanonValidationResult> {
+    const allViolations: ValidationViolation[] = [];
+    const errors: CanonValidationResult['errors'] = [];
+    const warnings: CanonValidationResult['warnings'] = [];
+    const infos: CanonValidationResult['infos'] = [];
+
+    // 1. Reuse validateVideoScript() (VF-2.4) untuk cek script final
+    const scriptResult = await this.validateVideoScript(script, context, options);
+    allViolations.push(...scriptResult.violations);
+
+    // 2. Check shot descriptions/visual prompts konsisten persona
+    if (context.shotDescriptions && context.shotDescriptions.length > 0) {
+      const shotViolations = checkShotDescriptionConsistency(context);
+      allViolations.push(...shotViolations);
+    }
+
+    // 3. Check visual prompts konsisten persona (jika ada)
+    if (context.visualPrompts && context.visualPrompts.length > 0) {
+      const visualViolations = checkVisualPromptConsistency(context);
+      allViolations.push(...visualViolations);
+    }
+
+    // 4. Categorize violations
+    for (const violation of allViolations) {
+      const categorized = {
+        path: violation.location,
+        message: `${violation.rule}: Expected ${JSON.stringify(violation.expected)}, got ${JSON.stringify(violation.actual)}`,
+        code: violation.rule,
+      };
+      switch (violation.severity) {
+        case 'error': errors.push(categorized); break;
+        case 'warning': warnings.push(categorized); break;
+        case 'info': infos.push(categorized); break;
+      }
+    }
+
+    const consistencyScore = calculateConsistencyScoreFromViolations(allViolations);
+
+    return {
+      valid: errors.length === 0,
+      consistencyScore,
+      violations: allViolations,
+      errors,
+      warnings,
+      infos,
+    };
+  }
+
+  // ============================================================
   // VF-2.4 — Video script canon check
   // Extend (bukan rewrite) — method baru untuk naskah video,
   // pakai VideoCharacterContext (VF-2.0), BUKAN CharacterProfile lama.
@@ -787,6 +862,236 @@ export interface ValidationOptions {
   enableLLMJudge?: boolean;
   judgingCriteria?: JudgingCriteria;
   strictMode?: boolean;
+}
+
+// ============================================================
+// VF-5.2 — Canon check final sebelum export (video jadi)
+// Extend (bukan rewrite) — method baru untuk cek video final,
+// bukan cuma naskah. Reuse validateVideoScript() (VF-2.4) untuk
+// script, lalu tambah check shot descriptions & metadata video.
+// ============================================================
+
+/**
+ * Konteks untuk canon check video final (VF-5.2).
+ * Extend VideoCanonContext (VF-2.4) dengan field video jadi:
+ * shot descriptions, metadata render, dll.
+ */
+export interface VideoFinalCanonContext extends VideoCanonContext {
+  /** ShotSpec[] final dari storyboard — untuk cek visual prompt konsisten persona */
+  shotDescriptions?: string[];
+
+  /** Visual prompts per shot — untuk cek konsistensi persona di level visual */
+  visualPrompts?: string[];
+
+  /** Metadata video final (judul, durasi, dll) — opsional */
+  videoMetadata?: {
+    title?: string;
+    duration?: number;
+    renderStatus?: string;
+  };
+}
+
+/**
+ * Validate video final against canon — cek video jadi (bukan cuma naskah).
+ *
+ * Ini adalah canon check final sebelum export (VF-5.2):
+ * 1. Reuse validateVideoScript() (VF-2.4) untuk cek script final
+ * 2. Tambah check shot descriptions/visual prompts konsisten persona
+ * 3. Tambah check series continuity di level video jadi
+ *
+ * Acceptance criteria: "Video yang melanggar persona karakter atau
+ * continuity series juga ter-flag, terpisah dari hasil content moderation"
+ *
+ * @param script Script final video
+ * @param context Konteks video final (extend VideoCanonContext)
+ * @param options Opsi validasi
+ * @returns Hasil canon validation
+ */
+async function validateVideoFinal(
+  this: CanonValidator,
+  script: string,
+  context: VideoFinalCanonContext,
+  options: ValidationOptions = {}
+): Promise<CanonValidationResult> {
+  const allViolations: ValidationViolation[] = [];
+  const errors: CanonValidationResult['errors'] = [];
+  const warnings: CanonValidationResult['warnings'] = [];
+  const infos: CanonValidationResult['infos'] = [];
+
+  // 1. Reuse validateVideoScript() (VF-2.4) untuk cek script final
+  const scriptResult = await this.validateVideoScript(script, context, options);
+  allViolations.push(...scriptResult.violations);
+
+  // 2. Check shot descriptions/visual prompts konsisten persona
+  if (context.shotDescriptions && context.shotDescriptions.length > 0) {
+    const shotViolations = checkShotDescriptionConsistency(context);
+    allViolations.push(...shotViolations);
+  }
+
+  // 3. Check visual prompts konsisten persona (jika ada)
+  if (context.visualPrompts && context.visualPrompts.length > 0) {
+    const visualViolations = checkVisualPromptConsistency(context);
+    allViolations.push(...visualViolations);
+  }
+
+  // 4. Categorize violations
+  for (const violation of allViolations) {
+    const categorized = {
+      path: violation.location,
+      message: `${violation.rule}: Expected ${JSON.stringify(violation.expected)}, got ${JSON.stringify(violation.actual)}`,
+      code: violation.rule,
+    };
+    switch (violation.severity) {
+      case 'error': errors.push(categorized); break;
+      case 'warning': warnings.push(categorized); break;
+      case 'info': infos.push(categorized); break;
+    }
+  }
+
+  const consistencyScore = calculateConsistencyScoreFromViolations(allViolations);
+
+  return {
+    valid: errors.length === 0,
+    consistencyScore,
+    violations: allViolations,
+    errors,
+    warnings,
+    infos,
+  };
+}
+
+/**
+ * Helper: hitung consistency score dari violations (standalone, tidak akses private method).
+ * Mirror logika CanonValidator.calculateConsistencyScore() tanpa judgeResult.
+ */
+function calculateConsistencyScoreFromViolations(violations: ValidationViolation[]): number {
+  if (violations.length === 0) return 1.0;
+  let score = 1.0;
+  for (const v of violations) {
+    switch (v.severity) {
+      case 'error': score -= 0.15; break;
+      case 'warning': score -= 0.05; break;
+      case 'info': score -= 0.01; break;
+    }
+  }
+  return Math.max(0, Math.min(1, score));
+}
+
+/**
+ * Check shot descriptions konsisten dengan persona karakter.
+ * Cek apakah shot descriptions mengandung kontradiksi dengan core traits/weakness.
+ */
+function checkShotDescriptionConsistency(context: VideoFinalCanonContext): ValidationViolation[] {
+  const violations: ValidationViolation[] = [];
+  const char = context.character;
+
+  if (!context.shotDescriptions) return violations;
+
+  // Cek kontradiksi weakness di shot descriptions
+  if (char.coreWeakness) {
+    const weaknessLower = char.coreWeakness.toLowerCase();
+    const weaknessKeywords = weaknessLower.split(/\s+/).filter((w: string) => w.length > 3).slice(0, 3);
+
+    const contradictionPatterns: Record<string, string[]> = {
+      'takut': ['sangat pemberani', 'tidak takut sama sekali', 'tanpa rasa takut', 'berani sekali'],
+      'penakut': ['sangat pemberani', 'tidak takut sama sekali', 'tanpa rasa takut', 'berani sekali'],
+      'lemah': ['sangat kuat', 'paling kuat', 'kekuatan luar biasa'],
+      'pemalu': ['sangat percaya diri', 'tanpa rasa malu', 'berani tampil'],
+    };
+
+    for (const keyword of weaknessKeywords) {
+      const patterns = contradictionPatterns[keyword];
+      if (patterns) {
+        for (const desc of context.shotDescriptions) {
+          const descLower = desc.toLowerCase();
+          for (const pattern of patterns) {
+            if (descLower.includes(pattern.toLowerCase())) {
+              violations.push({
+                rule: 'video-final-shot-weakness-contradiction',
+                severity: 'error',
+                location: `shot: "${desc.substring(0, 50)}..."`,
+                expected: `shot description konsisten dengan kelemahan "${char.coreWeakness}"`,
+                actual: `shot menggambarkan karakter sebagai "${pattern}" yang kontradiksi dengan kelemahan utama`,
+                suggestion: `Perbaiki shot description agar konsisten dengan kelemahan "${char.coreWeakness}"`,
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Cek kontradiksi core traits di shot descriptions
+  for (const trait of char.coreTraits) {
+    const traitLower = trait.toLowerCase();
+    const traitContradictions: Record<string, string[]> = {
+      'pemberani': ['penakut sekali', 'tidak berani sama sekali', 'lari ketakutan'],
+      'ingin tahu': ['tidak peduli sama sekali', 'acuh tak acuh'],
+      'setia kawan': ['mengkhianati teman', 'meninggalkan teman'],
+      'jujur': ['berbohong', 'berdusta', 'menipu'],
+    };
+
+    const patterns = traitContradictions[traitLower];
+    if (patterns) {
+      for (const desc of context.shotDescriptions) {
+        const descLower = desc.toLowerCase();
+        for (const pattern of patterns) {
+          if (descLower.includes(pattern.toLowerCase())) {
+            violations.push({
+              rule: 'video-final-shot-trait-contradiction',
+              severity: 'error',
+              location: `shot: "${desc.substring(0, 50)}..."`,
+              expected: `shot description konsisten dengan sifat "${trait}"`,
+              actual: `shot menggambarkan karakter dengan "${pattern}" yang kontradiksi dengan sifat inti "${trait}"`,
+              suggestion: `Perbaiki shot description agar konsisten dengan sifat "${trait}"`,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return violations;
+}
+
+/**
+ * Check visual prompts konsisten dengan persona karakter.
+ * Cek apakah visual prompts mengandung kontradiksi dengan visual description.
+ */
+function checkVisualPromptConsistency(context: VideoFinalCanonContext): ValidationViolation[] {
+  const violations: ValidationViolation[] = [];
+  const char = context.character;
+
+  if (!context.visualPrompts || !char.metadata.visualDescription) return violations;
+
+  const visualDescLower = char.metadata.visualDescription.toLowerCase();
+
+  // Cek apakah visual prompts menyebutkan karakter yang tidak konsisten
+  // dengan visual description (mis. visual description menyebut "anak hiu"
+  // tapi visual prompt menyebut "anak kucing")
+  const speciesKeywords = visualDescLower.match(/\b(anak\s+\w+|karakter\s+\w+)\b/g);
+  if (speciesKeywords) {
+    for (const prompt of context.visualPrompts) {
+      const promptLower = prompt.toLowerCase();
+      for (const keyword of speciesKeywords) {
+        // Kalau visual prompt menyebut spesies berbeda dari visual description
+        const otherSpecies = ['anak kucing', 'anak hiu', 'anak anjing', 'anak kelinci']
+          .filter(s => s !== keyword && promptLower.includes(s));
+        if (otherSpecies.length > 0) {
+          violations.push({
+            rule: 'video-final-visual-species-mismatch',
+            severity: 'warning',
+            location: `visual prompt: "${prompt.substring(0, 50)}..."`,
+            expected: `visual prompt konsisten dengan visual description (${keyword})`,
+            actual: `visual prompt menyebutkan ${otherSpecies.join(', ')} yang tidak cocok`,
+            suggestion: `Pastikan visual prompt menggunakan spesies yang konsisten dengan visual description karakter`,
+          });
+        }
+      }
+    }
+  }
+
+  return violations;
 }
 
 /**

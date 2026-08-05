@@ -15,7 +15,7 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import Link from 'next/link';
 import { studioApi } from '@/lib/api-client';
-import { FileText, LayoutGrid, Sparkles, AlertCircle, Wand2, Download } from 'lucide-react';
+import { FileText, LayoutGrid, Sparkles, AlertCircle, Wand2, Download, ShieldCheck } from 'lucide-react';
 
 export default function ProjectWorkspacePage() {
   const params = useParams();
@@ -23,7 +23,7 @@ export default function ProjectWorkspacePage() {
   const projectId = params.projectId as string;
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<'script' | 'storyboard' | 'generate' | 'export'>('script');
+  const [activeTab, setActiveTab] = useState<'script' | 'storyboard' | 'generate' | 'export' | 'review'>('script');
   const [storyIdea, setStoryIdea] = useState('');
 
   const { data, isLoading } = useQuery({
@@ -120,6 +120,15 @@ export default function ProjectWorkspacePage() {
         >
           <Download className="h-4 w-4" />
           Export
+        </button>
+        <button
+          onClick={() => setActiveTab('review')}
+          className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 ${
+            activeTab === 'review' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'
+          }`}
+        >
+          <ShieldCheck className="h-4 w-4" />
+          Review
         </button>
       </div>
 
@@ -272,6 +281,38 @@ export default function ProjectWorkspacePage() {
                 >
                   <Download className="h-4 w-4" />
                   Open Export Page
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Review Tab (VF-5.5) */}
+      {activeTab === 'review' && (
+        <div className="space-y-4">
+          {!project.script ? (
+            <div className="rounded-md bg-yellow-50 p-4 text-sm text-yellow-700 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              Generate script terlebih dahulu sebelum review.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="rounded-lg border p-6 text-center">
+                <ShieldCheck className="h-8 w-8 mx-auto text-primary mb-3" />
+                <h3 className="font-semibold mb-2">Canon & Safety Review</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Jalankan canon check (konsistensi persona & continuity) dan safety review
+                  (baseline platform policy + rating-consistency) sebelum export video.
+                  Tampilkan jelas mana yang &ldquo;wajib diperbaiki&rdquo; (baseline) vs
+                  &ldquo;sekadar informasi&rdquo; (rating-consistency).
+                </p>
+                <Link
+                  href={`/${universeId}/studio/${projectId}/review`}
+                  className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  Open Review Page
                 </Link>
               </div>
             </div>
