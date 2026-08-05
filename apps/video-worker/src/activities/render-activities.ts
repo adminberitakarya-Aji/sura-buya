@@ -46,24 +46,8 @@ import type {
 } from '../shared/render-interfaces.js';
 import { ApplicationFailure } from '@temporalio/common';
 
-// Local type for MediaAsset from Prisma (extends Prisma type with dynamic fields)
-interface MediaAssetWithExtras {
-    id: string;
-    projectId: string;
-    shotIndex: number;
-    type: string;
-    status: string;
-    providerUsed: string | null;
-    providerAttempts: string[];
-    retryCount: number;
-    resultUrl: string | null;
-    cost: number | null;
-    lastError: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-    metadata?: Record<string, unknown>;
-    subtype?: string;
-}
+// Use Prisma-generated MediaAsset type (includes subtype, metadata fields)
+type MediaAssetWithExtras = Prisma.MediaAssetGetPayload<{}>;
 
 // Type for CharacterAsset from Prisma (matching schema - no styleTags, colorPalette, negativePrompt)
 interface CharacterAssetPrisma {
@@ -173,31 +157,34 @@ export async function buildTimelineActivity(
     // 5. Build GeneratedVoiceover array
     const voiceovers: GeneratedVoiceover[] = audioAssets
         .filter((a: MediaAssetWithExtras) => a.subtype === 'VOICEOVER')
-        .map((asset: MediaAssetWithExtras) => ({
-            shotIndex: asset.shotIndex,
-            audioUrl: asset.resultUrl!,
-            durationActual: storyboard.find((s) => s.index === asset.shotIndex)?.duration ?? 5,
-            providerUsed: asset.providerUsed ?? 'unknown',
-            cost: 0,
-            characterId: '',
-            dialogueText: '',
-            voiceId: '',
-            attempts: [],
-        }));
+        .map((asset: MediaAssetWithExtras) => {
+            const meta = asset.metadata as Record<string, unknown> | undefined;
+            return {
+                shotIndex: asset.shotIndex,
+                audioUrl: asset.resultUrl!,
+                durationActual: storyboard.find((s) => s.index === asset.shotIndex)?.duration ?? 5,
+                providerUsed: asset.providerUsed ?? 'unknown',
+                cost: 0,
+                characterId: (meta?.['characterId'] as string) ?? '',
+                dialogueText: (meta?.['dialogueText'] as string) ?? '',
+                voiceId: (meta?.['voiceId'] as string) ?? '',
+                attempts: [],
+            };
+        });
 
     // 6. Build SelectedSfx array
     const sfxSelections = audioAssets
         .filter((a: MediaAssetWithExtras) => a.subtype === 'SFX')
         .reduce((acc: Record<number, { shotIndex: number; sfx: SfxLibraryEntry[] }>, asset: MediaAssetWithExtras) => {
             const shotIndex = asset.shotIndex;
-            const metadata: Record<string, unknown> = asset.metadata ?? {};
+            const metadata = asset.metadata as Record<string, unknown> | undefined;
             if (!acc[shotIndex]) {
                 acc[shotIndex] = { shotIndex, sfx: [] };
             }
             acc[shotIndex].sfx.push(createSfxLibraryEntry(
                 asset.resultUrl!,
-                (metadata['duration'] as number) ?? 1,
-                (metadata['sfxType'] as string) ?? 'impact'
+                (metadata?.['duration'] as number) ?? 1,
+                (metadata?.['sfxType'] as string) ?? 'impact'
             ));
             return acc;
         }, {} as Record<number, { shotIndex: number; sfx: SfxLibraryEntry[] }>);
@@ -210,11 +197,12 @@ export async function buildTimelineActivity(
 
     // 7. Build MusicSelectionResult
     const bgmAsset = audioAssets.find((a: MediaAssetWithExtras) => a.subtype === 'BGM');
+    const bgmMetadata = bgmAsset?.metadata as Record<string, unknown> | undefined;
     const music: MusicSelectionResult = bgmAsset
         ? {
-            primaryTrack: createMusicLibraryEntry(bgmAsset.resultUrl!, bgmAsset.metadata ?? {}),
+            primaryTrack: createMusicLibraryEntry(bgmAsset.resultUrl!, bgmMetadata ?? {}),
             alternativeTracks: [],
-            inferredMood: (bgmAsset.metadata?.['mood'] as string) ?? 'neutral',
+            inferredMood: (bgmMetadata?.['mood'] as string) ?? 'neutral',
             warnings: [],
         }
         : {

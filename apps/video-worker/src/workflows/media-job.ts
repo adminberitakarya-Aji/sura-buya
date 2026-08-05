@@ -166,6 +166,8 @@ export async function mediaJobWorkflow(
             providerAttempts: result.providerAttempts,
             resultUrl: result.resultUrl,
             cost: result.cost,
+            metadata: result.metadata,
+            subtype: result.subtype,
         });
 
         status = 'DONE';

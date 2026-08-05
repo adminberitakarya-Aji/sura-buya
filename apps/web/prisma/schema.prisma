@@ -260,24 +260,27 @@ model VideoProject {
 // ============================================================
 
 model MediaAsset {
-  id              String         @id @default(cuid())
+  id              String             @id @default(cuid())
   projectId       String
-  shotIndex       Int                          // index shot dalam storyboard (ShotSpec.index)
+  shotIndex       Int                              // index shot dalam storyboard (ShotSpec.index)
   type            MediaAssetType
-  status          MediaJobStatus @default(PENDING)
-  providerUsed    String?                      // nama provider yang SEDANG dipakai, mis. "kling-3.0" — berubah kalau fallback chain aktif
-  providerAttempts String[]                     // urutan fallback yang sudah dicoba, mis. ["kling-3.0", "seedance-2"]
-  retryCount      Int            @default(0)   // retry count untuk attempt SAAT INI (provider yang sedang aktif)
-  resultUrl       String?                      // URL asset hasil generate, terisi setelah status === DONE
-  cost            Float?                       // biaya generate ini dalam USD
-  lastError       String?        @db.Text       // pesan error terakhir, kalau status === FAILED
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  subtype         MediaAssetSubtype?               // NEW — nullable, cuma relevan untuk type AUDIO
+  status          MediaJobStatus      @default(PENDING)
+  providerUsed    String?                          // nama provider yang SEDANG dipakai, mis. "kling-3.0" — berubah kalau fallback chain aktif
+  providerAttempts String[]                         // urutan fallback yang sudah dicoba, mis. ["kling-3.0", "seedance-2"]
+  retryCount      Int                 @default(0)  // retry count untuk attempt SAAT INI (provider yang sedang aktif)
+  resultUrl       String?                          // URL asset hasil generate, terisi setelah status === DONE
+  cost            Float?                           // biaya generate ini dalam USD
+  lastError       String?            @db.Text       // pesan error terakhir, kalau status === FAILED
+  metadata        Json?                            // NEW — durasi, sfxType, mood, characterId dialog, dst
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 
   project VideoProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
   @@index([projectId, shotIndex])
+  @@index([projectId, type, subtype])   // NEW — query cepat "semua VOICEOVER di project X"
 }
 
 // VF-3.6 — jenis media yang dihasilkan untuk satu shot
@@ -285,6 +288,13 @@ enum MediaAssetType {
   IMAGE       // keyframe image dari ImageProvider (VF-3.1)
   VIDEO_CLIP  // image-to-video dari VideoProvider (VF-3.3)
   AUDIO       // TTS/SFX/music dari VoiceProvider (VF-4.1)
+}
+
+// VF-4.x — sub-jenis untuk AUDIO (VF-4.1 voiceover, VF-4.3 sfx/bgm)
+enum MediaAssetSubtype {
+  VOICEOVER  // TTS dialog per shot (VF-4.1)
+  SFX        // sound effect dari library (VF-4.3)
+  BGM        // background music dari library (VF-4.3)
 }
 
 // VF-3.6 — status siklus hidup satu MediaJob (mirror MediaJobStatus di @suro-buya/shared)

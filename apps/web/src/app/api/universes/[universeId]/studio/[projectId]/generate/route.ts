@@ -42,6 +42,9 @@ interface RouteParams {
 const startGenerateSchema = z.object({
   /** Generate hanya IMAGE keyframe, atau IMAGE + VIDEO_CLIP? Default: 'all' */
   mode: z.enum(['images', 'all']).default('all'),
+  
+  /** Generate AUDIO (voiceover/SFX/BGM) — default true */
+  audio: z.boolean().default(true),
 });
 
 /**
@@ -88,7 +91,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     await assertCan(userId, params.universeId, 'content:write');
 
     const body = await req.json().catch(() => ({}));
-    const { mode } = startGenerateSchema.parse(body);
+    const { mode, audio } = startGenerateSchema.parse(body);
 
     const { prisma } = await import('@/lib/prisma');
 
@@ -138,7 +141,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
     // 3. Create MediaAsset (IMAGE) per shot yang belum ada, lalu START workflow-nya.
     //    TIDAK menunggu hasil — hanya menjadwalkan job ke Temporal task queue.
-    const started: { shotIndex: number; type: string; started: boolean }[] = [];
+    const started: { shotIndex: number; type: string; subtype?: string; started: boolean }[] = [];
 
     for (const shot of storyboard) {
       const shotIndex = shot.index;
@@ -177,7 +180,102 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // 4. Return SEGERA — jangan tunggu generate selesai. Frontend polling GET
+    // 5. Audio generation (VOICEOVER + SFX + BGM) — synchronous for SFX/BGM,
+    //    Temporal workflow for VOICEOVER.
+    if (audio) {
+      // Import audio selectors
+    const { selectSfxForShots, selectMusicForVideo } = await import('@suro-buya/engine-v2');
+      
+      // 5a. VOICEOVER — per shot dengan dialogue, create MediaAsset + start Temporal workflow
+      for (const shot of storyboard) {
+        if (!shot.dialogue) continue; // skip shot tanpa dialog
+        
+        const shotIndex = shot.index;
+        let voiceAsset = await prisma.mediaAsset.findFirst({
+          where: { projectId: params.projectId, shotIndex, type: 'AUDIO', subtype: 'VOICEOVER' },
+        });
+        
+        if (!voiceAsset) {
+          voiceAsset = await prisma.mediaAsset.create({
+            data: {
+              projectId: params.projectId,
+              shotIndex,
+              type: 'AUDIO',
+              subtype: 'VOICEOVER',
+              status: 'PENDING',
+              providerAttempts: [],
+            },
+          });
+        }
+        
+        if (voiceAsset.status === 'PENDING' || voiceAsset.status === 'FAILED') {
+          const { startMediaJob } = await import('@suro-buya/video-worker/client');
+          try {
+            await startMediaJob({
+              mediaAssetId: voiceAsset.id,
+              projectId: params.projectId,
+              shotIndex,
+              type: 'AUDIO',
+              shotSpec: shot,
+            });
+            started.push({ shotIndex, type: 'AUDIO', subtype: 'VOICEOVER', started: true });
+          } catch (err) {
+            // Already started or other error - log and continue
+            console.warn(`VOICEOVER workflow already started or error for shot ${shotIndex}:`, err);
+            started.push({ shotIndex, type: 'AUDIO', subtype: 'VOICEOVER', started: false });
+          }
+        }
+      }
+      
+      // 5b. SFX — select from library, create MediaAsset with status DONE directly
+      const sfxResult = selectSfxForShots(storyboard);
+      for (const sfxSelection of sfxResult.selections) {
+        const shotIndex = sfxSelection.shotIndex;
+        for (const sfxEntry of sfxSelection.sfx) {
+          await prisma.mediaAsset.create({
+            data: {
+              projectId: params.projectId,
+              shotIndex,
+              type: 'AUDIO',
+              subtype: 'SFX',
+              status: 'DONE',
+              resultUrl: sfxEntry.url,
+              metadata: {
+                sfxType: sfxEntry.category,
+                duration: sfxEntry.duration,
+              },
+              providerUsed: 'library',
+              providerAttempts: [],
+            },
+          });
+        }
+      }
+      
+      // 5c. BGM — select from library, create MediaAsset with status DONE directly
+      const bgmResult = selectMusicForVideo(storyboard, (project.settings as any)?.contentRating ?? 'ALL_AGES');
+      if (bgmResult.primaryTrack) {
+        await prisma.mediaAsset.create({
+          data: {
+            projectId: params.projectId,
+            shotIndex: 0, // BGM applies to whole video, use shotIndex 0
+            type: 'AUDIO',
+            subtype: 'BGM',
+            status: 'DONE',
+            resultUrl: bgmResult.primaryTrack.url,
+            metadata: {
+              mood: bgmResult.inferredMood,
+              duration: bgmResult.primaryTrack.duration,
+              bpm: bgmResult.primaryTrack.bpm,
+              genre: bgmResult.primaryTrack.genre,
+            },
+            providerUsed: 'library',
+            providerAttempts: [],
+          },
+        });
+      }
+    }
+
+    // 6. Return SEGERA — jangan tunggu generate selesai. Frontend polling GET
     //    (lihat generate/page.tsx) yang akan menampilkan progress real-time.
     return NextResponse.json({
       message: 'Generation started — poll GET for progress',

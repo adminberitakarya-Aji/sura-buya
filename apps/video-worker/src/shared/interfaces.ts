@@ -92,6 +92,10 @@ export interface MediaGenerationResult {
      * biaya baru dikenakan. false/undefined = generate baru sungguhan.
      */
     fromCache?: boolean;
+    /** Metadata untuk disimpan ke MediaAsset.metadata (opsional, mis. duration, characterId untuk VOICEOVER) */
+    metadata?: Record<string, unknown>;
+    /** Subtype untuk AUDIO (VOICEOVER, SFX, BGM) */
+    subtype?: string;
 }
 
 /**
@@ -106,6 +110,8 @@ export interface MediaAssetStatusUpdate {
     resultUrl?: string;
     cost?: number;
     lastError?: string;
+    metadata?: Record<string, unknown>;
+    subtype?: string;
 }
 
 /**

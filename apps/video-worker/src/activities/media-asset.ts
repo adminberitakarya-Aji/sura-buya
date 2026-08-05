@@ -34,6 +34,8 @@ export async function updateMediaAssetStatus(
         resultUrl,
         cost,
         lastError,
+        metadata,
+        subtype,
     } = update;
 
     // Build update data — hanya field yang diisi yang di-update
@@ -56,6 +58,12 @@ export async function updateMediaAssetStatus(
     }
     if (lastError !== undefined) {
         data['lastError'] = lastError;
+    }
+    if (metadata !== undefined) {
+        data['metadata'] = metadata;
+    }
+    if (subtype !== undefined) {
+        data['subtype'] = subtype;
     }
 
     await prisma.mediaAsset.update({

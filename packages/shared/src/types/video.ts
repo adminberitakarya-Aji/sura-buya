@@ -203,6 +203,9 @@ export interface VideoCharacterContext {
 /** Jenis media yang dihasilkan untuk satu shot */
 export type MediaAssetType = 'IMAGE' | 'VIDEO_CLIP' | 'AUDIO';
 
+/** Sub-jenis untuk AUDIO (VF-4.1 voiceover, VF-4.3 sfx/bgm) */
+export type MediaAssetSubtype = 'VOICEOVER' | 'SFX' | 'BGM';
+
 /** Status siklus hidup satu MediaJob */
 export type MediaJobStatus =
     | 'PENDING'
@@ -229,6 +232,9 @@ export interface MediaJob {
 
     type: MediaAssetType;
 
+    /** Sub-jenis untuk AUDIO (VOICEOVER/SFX/BGM) — nullable, hanya relevan untuk type AUDIO */
+    subtype?: MediaAssetSubtype;
+
     status: MediaJobStatus;
 
     /** Nama provider yang SEDANG dipakai, mis. "kling-3.0" — berubah kalau fallback chain aktif */
@@ -248,6 +254,9 @@ export interface MediaJob {
 
     /** Pesan error terakhir, kalau status === 'FAILED' */
     lastError?: string;
+
+    /** Metadata tambahan per subtype: VOICEOVER={characterId,dialogueText,voiceId}, SFX={sfxType,duration}, BGM={mood,duration} */
+    metadata?: Record<string, unknown>;
 
     createdAt: string;
     updatedAt: string;

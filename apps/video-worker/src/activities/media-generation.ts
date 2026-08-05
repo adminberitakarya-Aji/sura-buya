@@ -377,6 +377,14 @@ export async function generateVoiceover(input: {
             providerUsed,
             providerAttempts: attempts,
             cost: result.cost ?? 0,
+            // Return metadata for the workflow to store
+            metadata: {
+                duration: result.durationActual,
+                characterId: shotSpec.dialogue.characterId,
+                dialogueText: shotSpec.dialogue.line,
+                voiceId: voiceProfile.voiceId,
+            },
+            subtype: 'VOICEOVER',
         };
     } catch (err) {
         rethrowChainExhausted(err);
